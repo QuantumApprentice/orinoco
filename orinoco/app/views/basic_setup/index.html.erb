@@ -1,33 +1,74 @@
-<div>
-  <h1 class="font-bold text-4xl">BasicSetup#index</h1>
-  <p>Find me in app/views/basic_setup/index.html.erb</p>
-  <h1>OBS Config</h1>
+<%= render SplitOneFourOneComponent.new do |layout| %>
+  <% layout.with_two do %>
+    <%= render CardComponent.new do %>
+      <%= tag.div class: cx("space-y-6") do %>
+        <%= tag.div do %>
+          <%= tag.h1 "Basic Setup", class: cx("text-2xl", "font-bold") %>
+          <%= tag.p "OBS Config", class: cx("mt-1", "text-sm", "text-gray-600", "dark:text-gray-400") %>
+        <% end %>
 
-  <%= form_with model: @obs_config, url: obs_config_path do |form| %>
-    <% if @obs_config.errors.any? %>
-      <div>
-        <h2><%= pluralize(@obs_config.errors.count, "error") %> prevented saving:</h2>
-        <ul>
-          <% @obs_config.errors.full_messages.each do |message| %>
-            <li><%= message %></li>
+        <% if @obs_config.errors.any? %>
+          <%= tag.div class: cx(
+            "rounded-md border p-4",
+            "border-red-200 bg-red-50 text-red-800",
+            "dark:border-red-800 dark:bg-red-950 dark:text-red-200"
+          ) do %>
+            <%= tag.h2 "#{pluralize(@obs_config.errors.count, "error")} prevented saving:",
+              class: cx("text-sm", "font-semibold") %>
+
+            <%= tag.ul class: cx("mt-2", "list-disc", "pl-5", "text-sm") do %>
+              <% @obs_config.errors.full_messages.each do |message| %>
+                <%= tag.li message %>
+              <% end %>
+            <% end %>
           <% end %>
-        </ul>
-      </div>
+        <% end %>
+
+        <%= form_with model: @obs_config,
+          url: obs_config_path(return_to: params[:return_to]),
+          class: cx("space-y-6") do |form| %>
+          <%= tag.div class: cx("space-y-2") do %>
+            <%= form.label :host, class: cx(
+              "block", "text-sm", "font-medium",
+              "text-gray-700", "dark:text-gray-300"
+            ) %>
+
+            <%= form.text_field :host, class: cx(
+              "block w-full rounded-md border px-3 py-2 shadow-sm",
+              "border-gray-300 bg-white text-gray-900",
+              "placeholder:text-gray-400",
+              "focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500",
+              "dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100",
+              "dark:placeholder:text-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+            ) %>
+          <% end %>
+
+          <%= tag.div class: cx("space-y-2") do %>
+            <%= form.label :port, class: cx(
+              "block", "text-sm", "font-medium",
+              "text-gray-700", "dark:text-gray-300"
+            ) %>
+
+            <%= form.number_field :port, class: cx(
+              "block w-full rounded-md border px-3 py-2 shadow-sm",
+              "border-gray-300 bg-white text-gray-900",
+              "placeholder:text-gray-400",
+              "focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500",
+              "dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100",
+              "dark:placeholder:text-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+            ) %>
+          <% end %>
+
+          <%= tag.div do %>
+            <%= form.submit "Save OBS config", class: cx(
+              "inline-flex items-center rounded-md px-4 py-2 text-sm font-medium shadow-sm",
+              "bg-blue-600 text-white hover:bg-blue-700",
+              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+              "dark:bg-blue-500 dark:hover:bg-blue-400 dark:focus:ring-offset-gray-800"
+            ) %>
+          <% end %>
+        <% end %>
+      <% end %>
     <% end %>
-
-    <div>
-      <%= form.label      :host %>
-      <%= form.text_field :host %>
-    </div>
-
-    <div>
-      <%= form.label        :port %>
-      <%= form.number_field :port %>
-    </div>
-
-    <div>
-      <%= form.submit "Save OBS config" %>
-    </div>
   <% end %>
-
-</div>
+<% end %>
