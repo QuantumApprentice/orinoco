@@ -1,4 +1,33 @@
 <div>
   <h1 class="font-bold text-4xl">BasicSetup#index</h1>
   <p>Find me in app/views/basic_setup/index.html.erb</p>
+  <h1>OBS Config</h1>
+
+  <%= form_with model: @obs_config, url: obs_config_path do |form| %>
+    <% if @obs_config.errors.any? %>
+      <div>
+        <h2><%= pluralize(@obs_config.errors.count, "error") %> prevented saving:</h2>
+        <ul>
+          <% @obs_config.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.label      :host %>
+      <%= form.text_field :host %>
+    </div>
+
+    <div>
+      <%= form.label        :port %>
+      <%= form.number_field :port %>
+    </div>
+
+    <div>
+      <%= form.submit "Save OBS config" %>
+    </div>
+  <% end %>
+
 </div>

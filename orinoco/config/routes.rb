@@ -4,6 +4,8 @@ Rails.application.routes.draw do
   post "clip_show/play"
   get  "clip_show/get_scenes"
 
+  resource :obs_config, only: [:show, :edit, :update, :create]
+
   # root "clip_show#index"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

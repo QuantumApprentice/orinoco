@@ -17,7 +17,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_20_040601) do
 
   create_table "obs_configs", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.string "hostname"
+    t.string "host"
     t.integer "port"
     t.datetime "updated_at", null: false
   end
