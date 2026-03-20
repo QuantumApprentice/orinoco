@@ -2,7 +2,14 @@
   <h1 class="font-bold text-4xl">ClipShow#index</h1>
   <p>Find me in app/views/clip_show/index.html.erb</p>
 
-  <%-@some_value.each do |val| %>
-    <%=button_to val, clip_show_play_path(id:@scenes.by_name[val], clip_name:val)%>
+  <%=link_to "Connect To OBS", clip_show_get_scenes_path(host:"localhost", port:"4455") %>
+  <%= form_tag  do %>
+    <%=label_tag :host, "localhost"%>
+    <%=text_field_tag :host %>
+    <br>
+    <%=label_tag :port, "port"%>
+    <%=text_field_tag :port %>
+    <br>
   <%end%>
+
 </div>

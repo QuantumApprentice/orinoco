@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 if ! gem list foreman -i --silent; then
   echo "Installing foreman..."
@@ -12,5 +12,9 @@ export PORT="${PORT:-3000}"
 # but avoid loading until `debugger` is called
 export RUBY_DEBUG_OPEN="true"
 export RUBY_DEBUG_LAZY="true"
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$PARENT_DIR"
 
 exec foreman start -f Procfile.dev "$@"

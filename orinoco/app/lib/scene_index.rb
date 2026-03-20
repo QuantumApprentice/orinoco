@@ -14,6 +14,7 @@ class SceneIndex
     req.get_scene_item_list(@scene).scene_items.each do |clip|
       fresh[clip[:sourceName]] = clip[:sceneItemId]
     end
+
     @mtx.synchronize { @by_name = fresh }
     @logger.call("[requests] refreshed scene index for #{@scene} (#{fresh.size})")
   end
@@ -22,4 +23,3 @@ class SceneIndex
     @mtx.synchronize { @by_name[name] }
   end
 end
-

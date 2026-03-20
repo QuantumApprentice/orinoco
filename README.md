@@ -29,7 +29,7 @@ We should be able to make a 'chat event generifier' event pipeline such that we 
 
 Initial Target Functionalities:
 Clip Triggers (enable a input source to 'play' it, with disable-on-finish event response)
-metadata trackign of who triggered what how many times when
+metadata tracking of who triggered what how many times when
 be able to setup chained plays - clip a, clip b, clip c
 be able to random select a clip
 be able to sequence the random clip select (i.e. always play these 2, then play 1 out of the 4 choices)
