@@ -3,5 +3,13 @@
   <p>Find me in app/views/clip_show/index.html.erb</p>
 
   <%=link_to "Connect To OBS", clip_show_get_scenes_path(host:"localhost", port:"4455") %>
+  <%= form_tag  do %>
+    <%=label_tag :host, "localhost"%>
+    <%=text_field_tag :host %>
+    <br>
+    <%=label_tag :port, "port"%>
+    <%=text_field_tag :port %>
+    <br>
+  <%end%>
 
 </div>

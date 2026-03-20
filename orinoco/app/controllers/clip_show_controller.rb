@@ -1,10 +1,10 @@
 class ClipShowController < ApplicationController
   def index
-    @scenes=SceneList.new()
+    @scenes= Hash.new
     @clips=SceneIndex.new(scene:"Clips")
     OBSWS::Requests::Client.new(host: @host, port: @port).run do |req|
       @clips.refresh!(req)
-      @scenes.get_all_scenes(req)
+      # @scenes.get_all_scenes(req)
     end
   end
 
