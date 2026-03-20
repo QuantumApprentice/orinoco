@@ -1,4 +1,6 @@
 class ObsConfigsController < ApplicationController
+  skip_before_action :ensure_obs_config!
+
   def edit
     @obs_config = ObsConfig.first_or_initialize
   end
