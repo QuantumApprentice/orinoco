@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  get "basic_setup/index"
   get  "clip_show/index"
   post "clip_show/play"
   get  "clip_show/get_scenes"
