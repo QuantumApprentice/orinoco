@@ -1,6 +1,9 @@
 Rails.application.routes.draw do
   get  "clip_show/index"
   post "clip_show/play"
+  get  "clip_show/get_scenes"
+
+  # root "clip_show#index"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
