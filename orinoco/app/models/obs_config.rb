@@ -1,0 +1,2 @@
+class ObsConfig < ApplicationRecord
+end
