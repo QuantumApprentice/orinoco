@@ -1,0 +1,158 @@
+<div class="space-y-8 text-gray-900 dark:text-gray-100">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">OBS Bridge Admin</h1>
+      <p class="text-sm text-gray-600 dark:text-gray-400">
+        Bridge ID:
+        <span class="font-mono text-gray-900 dark:text-gray-100"><%= @bridge[:bridge_id] %></span>
+      </p>
+    </div>
+
+    <div class="flex gap-2">
+      <%= button_to "Start bridge",
+        start_admin_obs_bridge_path(@bridge[:bridge_id]),
+        method: :post,
+        class: "rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-400" %>
+
+      <%= button_to "Stop bridge",
+        stop_admin_obs_bridge_path(@bridge[:bridge_id]),
+        method: :post,
+        class: "rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-400" %>
+
+      <%= button_to "Refresh inventory",
+        refresh_admin_obs_bridge_path(@bridge[:bridge_id]),
+        method: :post,
+        class: "rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400" %>
+    </div>
+  </div>
+
+  <div class="rounded border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+    <h2 class="mb-4 text-lg font-medium">Capture all events</h2>
+
+    <%= form_with url: capture_all_admin_obs_bridge_path(@bridge[:bridge_id]), method: :post, local: true, class: "flex items-end gap-3" do |form| %>
+      <div>
+        <%= form.label :duration_seconds, "Duration (seconds)", class: "mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300" %>
+        <%= form.number_field :duration_seconds,
+          value: 900,
+          min: 1,
+          class: "rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500" %>
+      </div>
+
+      <%= form.submit "Start capture window",
+        class: "rounded bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-400" %>
+    <% end %>
+  </div>
+
+  <div class="rounded border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+    <h2 class="mb-4 text-lg font-medium">Bridge status</h2>
+
+    <% status = @bridge[:status] %>
+
+    <dl class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Desired state</dt>
+        <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100"><%= status[:desired_state] %></dd>
+      </div>
+
+      <div>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Runtime state</dt>
+        <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100"><%= status[:runtime_state] %></dd>
+      </div>
+
+      <div>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Connected</dt>
+        <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100"><%= status[:connected] %></dd>
+      </div>
+
+      <div>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Capture all active</dt>
+        <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100"><%= status[:capture_all_active] %></dd>
+      </div>
+
+      <div>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Capture all until</dt>
+        <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100"><%= status[:capture_all_until]&.iso8601 || "—" %></dd>
+      </div>
+
+      <div>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Inventory scene count</dt>
+        <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100"><%= status[:inventory_scene_count] %></dd>
+      </div>
+
+      <div>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Inventory refreshed at</dt>
+        <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100"><%= status[:inventory_refreshed_at]&.iso8601 || "—" %></dd>
+      </div>
+
+      <div>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last heartbeat</dt>
+        <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100"><%= status[:last_heartbeat_at]&.iso8601 || "—" %></dd>
+      </div>
+
+      <div>
+        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Updated at</dt>
+        <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100"><%= status[:updated_at]&.iso8601 || "—" %></dd>
+      </div>
+    </dl>
+
+    <% if status[:last_error].present? %>
+      <div class="mt-4 rounded border border-red-300 bg-red-50 p-3 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+        <div class="text-sm font-medium">Last error</div>
+        <pre class="mt-2 whitespace-pre-wrap font-mono text-sm"><%= status[:last_error] %></pre>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-medium">Scenes</h2>
+      <div class="text-sm text-gray-500 dark:text-gray-400">
+        <%= @bridge[:scenes].length %> scenes
+      </div>
+    </div>
+
+    <% if @bridge[:scenes].empty? %>
+      <div class="rounded border border-gray-200 bg-white p-4 text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+        No scene inventory in Redis yet.
+      </div>
+    <% else %>
+      <% @bridge[:scenes].each do |scene| %>
+        <div class="rounded border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+          <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">
+              <%= scene["sceneName"] || "(unnamed scene)" %>
+            </h3>
+            <span class="text-sm text-gray-500 dark:text-gray-400">
+              <%= scene["items"].length %> items
+            </span>
+          </div>
+
+          <% if scene["items"].empty? %>
+            <div class="text-sm text-gray-500 dark:text-gray-400">No items recorded for this scene.</div>
+          <% else %>
+            <div class="overflow-x-auto">
+              <table class="min-w-full border-collapse text-sm">
+                <thead>
+                  <tr class="border-b border-gray-200 text-left dark:border-gray-700">
+                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300">Scene item ID</th>
+                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300">Source name</th>
+                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-300">Enabled</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% scene["items"].each do |item| %>
+                    <tr class="border-b border-gray-200 last:border-b-0 dark:border-gray-800">
+                      <td class="px-3 py-2 font-mono text-gray-900 dark:text-gray-100"><%= item["sceneItemId"] || "—" %></td>
+                      <td class="px-3 py-2 font-mono text-gray-900 dark:text-gray-100"><%= item["sourceName"] || "—" %></td>
+                      <td class="px-3 py-2 font-mono text-gray-900 dark:text-gray-100"><%= item["sceneItemEnabled"] %></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

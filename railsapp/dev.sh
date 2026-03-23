@@ -12,8 +12,11 @@ case "$CMD" in
 migrate)
   run "'db:migrate'"
   ;;
-routes | r) 
+routes | r)
   run "'routes'"
+  ;;
+spec | sp)
+  run "'spec'"
   ;;
 tailwind | tw)
   run "'tailwindcss:build'"
