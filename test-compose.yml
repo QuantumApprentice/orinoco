@@ -4,7 +4,7 @@ include:
 - path: "./compose/orinoco-db.yml"
   project_directory: "./"
   env_file: "./test.env"
-- path: "./compose/orinoco.yml"
+- path: "./compose/railsapp.yml"
   project_directory: "./"
   env_file: "./test.env"
 - path: "./compose/goaws.yml"
