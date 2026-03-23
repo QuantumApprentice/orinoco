@@ -1,6 +1,6 @@
 ---
 services:
-  orgcache:
+  scoreboard-redis:
     image: redis:8.6.1-trixie
     healthcheck:
       test:

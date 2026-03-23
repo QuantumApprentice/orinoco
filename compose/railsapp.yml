@@ -1,6 +1,6 @@
 ---
 services:
-  orinoco:
+  railsapp:
     image: orinoco/railsapp
     ports:
       - "${ORINOCO_WEB_PORT}:3000"
@@ -15,5 +15,8 @@ services:
       context: "./railsapp"
     depends_on:
       orinoco-db:
+        condition: service_healthy
+        restart: true
+      scoreboard-redis:
         condition: service_healthy
         restart: true

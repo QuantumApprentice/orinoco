@@ -10,3 +10,6 @@ include:
 - path: "./compose/goaws.yml"
   project_directory: "./"
   env_file: "./development.env"
+- path: "./compose/redis.yml"
+  project_directory: "./"
+  env_file: "./development.env"

@@ -7,7 +7,7 @@ services:
     - POSTGRES_USER=${ORINOCO_DB_POSTGRES_USER}
     ports:
     - "${ORINOCO_DB_POSTGRES_PORT}:5432"
-  orinoco:
+  railsapp:
     environment:
     - DATABASE_URL=${ORINOCO_DB_DATABASE_URL}
     - RAILS_ENV=development

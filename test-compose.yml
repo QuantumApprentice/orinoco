@@ -10,3 +10,6 @@ include:
 - path: "./compose/goaws.yml"
   project_directory: "./"
   env_file: "./test.env"
+- path: "./compose/railsapp.yml"
+  project_directory: "./"
+  env_file: "./test.env"
