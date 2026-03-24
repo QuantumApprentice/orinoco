@@ -4,9 +4,11 @@ require "time"
 
 module ObsBridge
   class BridgeState
-    def initialize(redis:, bridge_id:, clock: -> { Time.now.utc }, default_enabled: false)
-      @redis = redis
+    def initialize(redis:, bridge_id:, clock: -> { Time.now.utc }, default_enabled: false, status_writer: nil)
+      @bridge_id = bridge_id
       @keys = RedisKeys.new(bridge_id: bridge_id)
+      @status_writer = status_writer || ObsBridge::StatusWriter.new(redis: redis, bridge_id: bridge_id)
+
       @clock = clock
       @mutex = Mutex.new
 
@@ -43,34 +45,26 @@ module ObsBridge
     end
 
     def enable!
-      @mutex.synchronize do
-        @desired_enabled = true
-        persist_locked!
-      end
+      mutate_and_persist! { @desired_enabled = true }
     end
 
     def disable!
-      @mutex.synchronize do
-        @desired_enabled = false
-        persist_locked!
-      end
+      mutate_and_persist! { @desired_enabled = false }
     end
 
     def connected!
-      @mutex.synchronize do
+      mutate_and_persist! do
         @runtime_connected = true
         @runtime_state = "up"
         @last_error = nil
-        persist_locked!
       end
     end
 
     def disconnected!(error: nil)
-      @mutex.synchronize do
+      mutate_and_persist! do
         @runtime_connected = false
         @runtime_state = "down"
         @last_error = error if error
-        persist_locked!
       end
     end
 
@@ -78,39 +72,26 @@ module ObsBridge
       seconds = Integer(seconds)
       raise ArgumentError, "seconds must be positive" unless seconds.positive?
 
-      @mutex.synchronize do
+      mutate_and_persist! do
         new_deadline = now + seconds
         @capture_all_until = [@capture_all_until, new_deadline].compact.max
-        persist_locked!
       end
     end
 
     def clear_capture_all!
-      @mutex.synchronize do
-        @capture_all_until = nil
-        persist_locked!
-      end
+      mutate_and_persist! { @capture_all_until = nil }
     end
 
     def set_last_error!(message)
-      @mutex.synchronize do
-        @last_error = message.to_s
-        persist_locked!
-      end
+      mutate_and_persist! { @last_error = message.to_s }
     end
 
     def clear_last_error!
-      @mutex.synchronize do
-        @last_error = nil
-        persist_locked!
-      end
+      mutate_and_persist! { @last_error = nil }
     end
 
     def heartbeat!
-      @mutex.synchronize do
-        @last_heartbeat_at = now
-        persist_locked!
-      end
+      mutate_and_persist! { @last_heartbeat_at = now }
     end
 
     def snapshot
@@ -120,17 +101,17 @@ module ObsBridge
     private
 
     def persist!
-      @mutex.synchronize { persist_locked! }
+      payload = @mutex.synchronize { snapshot_locked }
+      @status_writer.write_snapshot(payload)
     end
 
-    def persist_locked!
-      payload = snapshot_locked
-
-      @redis.pipelined do |pipe|
-        payload.each do |field, value|
-          pipe.hset(@keys.status, field, value)
-        end
+    def mutate_and_persist!
+      payload = @mutex.synchronize do
+        yield
+        snapshot_locked
       end
+
+      @status_writer.write_snapshot(payload)
     end
 
     def snapshot_locked
@@ -142,7 +123,6 @@ module ObsBridge
         "runtime_state" => @runtime_state,
         "connected" => boolean_string(@runtime_connected),
         "capture_all_until" => iso8601_or_blank(@capture_all_until),
-        # Useful for the UI, but the authoritative value is capture_all_until.
         "capture_all_active" => boolean_string(@capture_all_until && @capture_all_until > current_time),
         "last_error" => @last_error.to_s,
         "last_heartbeat_at" => iso8601_or_blank(@last_heartbeat_at),
@@ -151,8 +131,7 @@ module ObsBridge
     end
 
     def now
-      value = @clock.call
-      value.utc
+      @clock.call.utc
     end
 
     def iso8601_or_blank(value)

@@ -43,7 +43,9 @@
     <% end %>
   </div>
 
-  <%= render "status_panel", status: @bridge[:status] %>
+  <%= turbo_stream_from "obs_bridge_status:#{@bridge[:bridge_id]}" %>
+
+  <%= render "status_panel", status: @bridge[:status], bridge_id: @bridge[:bridge_id] %>
 
   <div class="space-y-6">
     <div class="flex items-center justify-between">
