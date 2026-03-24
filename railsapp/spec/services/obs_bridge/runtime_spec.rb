@@ -1,95 +1,81 @@
 # frozen_string_literal: true
 
 require "rails_helper"
-require "json"
 
 RSpec.describe ObsBridge::Runtime do
-  class FakeSession
-    attr_reader :fetch_inventory_calls, :pump_calls
-
-    def initialize(inventory:, pump_error: nil)
-      @inventory = inventory
-      @pump_error = pump_error
-      @fetch_inventory_calls = 0
-      @pump_calls = 0
-    end
-
-    def fetch_inventory
-      @fetch_inventory_calls += 1
-      @inventory
-    end
-
-    def pump_once(timeout:)
-      @pump_calls += 1
-      raise @pump_error if @pump_error
-      sleep timeout
-    end
+  let(:state) do
+    instance_double(
+      ObsBridge::BridgeState,
+      connected!: nil,
+      heartbeat!: nil,
+      disconnected!: nil
+    )
   end
 
-  class FakeSessionRunner
-    attr_reader :run_calls
-
-    def initialize(sessions: [], errors: [])
-      @sessions = sessions.dup
-      @errors = errors.dup
-      @run_calls = 0
-    end
-
-    def run
-      @run_calls += 1
-
-      error = @errors.shift
-      raise error if error
-
-      session = @sessions.shift || raise("no fake session available")
-      yield session
-    end
+  let(:inventory_store) do
+    instance_double(
+      ObsBridge::InventoryStore,
+      write_snapshot!: nil
+    )
   end
 
-  let(:redis) { FakeRedis.new }
-  let(:keys) { ObsBridge::RedisKeys.new(bridge_id: "main") }
-  let(:clock_state) { Struct.new(:now).new(Time.utc(2026, 3, 23, 18, 0, 0)) }
-  let(:clock) { -> { clock_state.now } }
+  let(:session_runner) do
+    instance_double(ObsBridge::ObswsRequestSessionRunner)
+  end
+
+  let(:backoff) do
+    instance_double(
+      ObsBridge::Backoff,
+      reset!: nil,
+      snooze!: nil
+    )
+  end
+
+  let(:logger) { instance_double(Proc, call: nil) }
+
+  let(:inventory) do
+    {
+      scenes: [{ "sceneName" => "Clips" }],
+      scene_items_by_scene: {
+        "Clips" => [{ "sceneItemId" => 1, "sourceName" => "fight", "sceneItemEnabled" => true }]
+      }
+    }
+  end
+
   let(:mono_state) { Struct.new(:value).new(0.0) }
   let(:monotonic_clock) { -> { mono_state.value } }
   let(:sleeper) do
     lambda do |seconds|
       mono_state.value += seconds
-      clock_state.now += seconds
       sleep(seconds / 50.0)
     end
   end
 
-  let(:state) do
-    ObsBridge::BridgeState.new(
-      redis: redis,
-      bridge_id: "main",
-      clock: clock,
-      default_enabled: false
+  let(:session) do
+    double("obs session", fetch_inventory: inventory).tap do |sess|
+      allow(sess).to receive(:pump_once) do |timeout:|
+        mono_state.value += timeout
+        sleep(timeout / 50.0)
+      end
+    end
+  end
+
+  subject(:runtime) do
+    described_class.new(
+      state: state,
+      inventory_store: inventory_store,
+      session_runner: session_runner,
+      logger: logger,
+      backoff: backoff,
+      heartbeat_interval: heartbeat_interval,
+      idle_sleep: idle_sleep,
+      monotonic_clock: monotonic_clock,
+      sleeper: sleeper
     )
   end
 
-  let(:inventory_store) do
-    ObsBridge::InventoryStore.new(
-      redis: redis,
-      bridge_id: "main",
-      clock: clock
-    )
-  end
-
-  def status
-    redis.hgetall(keys.status)
-  end
-
-  def stored_scenes
-    raw = redis.get(keys.scenes)
-    raw ? JSON.parse(raw) : nil
-  end
-
-  def stored_items(scene_name)
-    raw = redis.get(keys.scene_items(scene_name))
-    raw ? JSON.parse(raw) : nil
-  end
+  let(:heartbeat_interval) { 10.0 }
+  let(:idle_sleep) { 0.05 }
 
   def wait_until(timeout: 1.5)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
@@ -97,90 +83,71 @@ RSpec.describe ObsBridge::Runtime do
     loop do
       return true if yield
       raise "timed out waiting for condition" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
       sleep 0.01
     end
   end
 
-  it "connects, marks state up, and hydrates inventory on start" do
-    session = FakeSession.new(
-      inventory: {
-        scenes: [{ "sceneName" => "Clips" }],
-        scene_items_by_scene: {
-          "Clips" => [{ "sceneItemId" => 1, "sourceName" => "fight", "sceneItemEnabled" => true }]
-        }
-      }
-    )
+  def eventually(timeout: 1.5)
+    wait_until(timeout:) do
+      yield
+      true
+    rescue RSpec::Expectations::ExpectationNotMetError
+      false
+    end
+  end
 
-    runtime = described_class.new(
-      state: state,
-      inventory_store: inventory_store,
-      session_runner: FakeSessionRunner.new(sessions: [session]),
-      heartbeat_interval: 10.0,
-      idle_sleep: 0.05,
-      monotonic_clock: monotonic_clock,
-      sleeper: sleeper
-    )
+  it "connects, heartbeats, and hydrates inventory on start" do
+    allow(session_runner).to receive(:run).and_yield(session)
 
     runtime.start!
 
-    wait_until { state.runtime_connected? }
-    wait_until { stored_scenes == [{ "sceneName" => "Clips" }] }
-
-    expect(runtime.running?).to be(true)
-    expect(status["runtime_state"]).to eq("up")
-    expect(status["connected"]).to eq("true")
-    expect(stored_items("Clips")).to eq(
-      [{ "sceneItemId" => 1, "sourceName" => "fight", "sceneItemEnabled" => true }]
-    )
+    eventually { expect(backoff).to have_received(:reset!) }
+    eventually { expect(state).to have_received(:connected!) }
+    eventually { expect(state).to have_received(:heartbeat!).at_least(:once) }
+    eventually do
+      expect(inventory_store).to have_received(:write_snapshot!).with(
+        scenes: inventory[:scenes],
+        scene_items_by_scene: inventory[:scene_items_by_scene]
+      )
+    end
 
     runtime.stop!
     wait_until { !runtime.running? }
+
+    expect(state).to have_received(:disconnected!).at_least(:once)
   end
 
-  it "refreshes inventory on demand" do
-    session = FakeSession.new(
-      inventory: {
-        scenes: [{ "sceneName" => "Clips" }],
-        scene_items_by_scene: { "Clips" => [] }
-      }
-    )
-
-    runtime = described_class.new(
-      state: state,
-      inventory_store: inventory_store,
-      session_runner: FakeSessionRunner.new(sessions: [session]),
-      heartbeat_interval: 10.0,
-      idle_sleep: 0.05,
-      monotonic_clock: monotonic_clock,
-      sleeper: sleeper
-    )
+  it "refreshes inventory on demand while running" do
+    allow(session_runner).to receive(:run).and_yield(session)
 
     runtime.start!
 
-    wait_until { state.runtime_connected? }
-    first_calls = session.fetch_inventory_calls
+    eventually { expect(session).to have_received(:fetch_inventory).once }
 
     runtime.refresh_inventory!
 
-    wait_until { session.fetch_inventory_calls > first_calls }
-    expect(session.fetch_inventory_calls).to be >= 2
+    eventually { expect(session).to have_received(:fetch_inventory).at_least(:twice) }
+    eventually { expect(inventory_store).to have_received(:write_snapshot!).at_least(:twice) }
 
     runtime.stop!
     wait_until { !runtime.running? }
   end
 
+  it "does nothing when refresh_inventory! is called while stopped" do
+    expect(runtime.refresh_inventory!).to be_nil
+    expect(inventory_store).not_to have_received(:write_snapshot!)
+  end
+
   it "heartbeats while connected" do
-    session = FakeSession.new(
-      inventory: {
-        scenes: [{ "sceneName" => "Clips" }],
-        scene_items_by_scene: { "Clips" => [] }
-      }
-    )
+    allow(session_runner).to receive(:run).and_yield(session)
 
     runtime = described_class.new(
       state: state,
       inventory_store: inventory_store,
-      session_runner: FakeSessionRunner.new(sessions: [session]),
+      session_runner: session_runner,
+      logger: logger,
+      backoff: backoff,
       heartbeat_interval: 0.1,
       idle_sleep: 0.05,
       monotonic_clock: monotonic_clock,
@@ -189,84 +156,93 @@ RSpec.describe ObsBridge::Runtime do
 
     runtime.start!
 
-    wait_until { state.runtime_connected? }
-    first_heartbeat = status["last_heartbeat_at"]
-
-    wait_until { status["last_heartbeat_at"] != first_heartbeat }
+    eventually { expect(state).to have_received(:heartbeat!).at_least(:twice) }
 
     runtime.stop!
     wait_until { !runtime.running? }
   end
 
-  it "records runtime errors and retries" do
-    session = FakeSession.new(
-      inventory: {
-        scenes: [{ "sceneName" => "Clips" }],
-        scene_items_by_scene: { "Clips" => [] }
-      },
-      pump_error: StandardError.new("socket went sideways")
-    )
+  it "records runtime errors, disconnects with the error, and retries with backoff" do
+    allow(session).to receive(:pump_once).and_raise(StandardError.new("socket went sideways"))
+    allow(session_runner).to receive(:run).and_yield(session)
 
-    sleeps = []
-    backoff = ObsBridge::Backoff.new(
-      min: 0.01,
-      max: 0.02,
-      factor: 2.0,
-      jitter: 0.0,
-      sleeper: ->(seconds) { sleeps << seconds; sleeper.call(seconds) }
-    )
+    runtime.start!
 
-    runner = FakeSessionRunner.new(
-      sessions: [session, session]
-    )
+    eventually do
+      expect(state).to have_received(:disconnected!)
+        .with(error: "runtime loop failed: StandardError: socket went sideways")
+        .at_least(:once)
+    end
+
+    eventually { expect(session_runner).to have_received(:run).at_least(:twice) }
+    eventually { expect(backoff).to have_received(:snooze!).with(label: "obs-bridge/runtime").at_least(:once) }
+
+    runtime.stop!
+    wait_until { !runtime.running? }
+  end
+
+  it "marks disconnected on stop" do
+    allow(session_runner).to receive(:run).and_yield(session)
+
+    runtime.start!
+    eventually { expect(state).to have_received(:connected!) }
+
+    runtime.stop!
+    wait_until { !runtime.running? }
+
+    expect(state).to have_received(:disconnected!).at_least(:once)
+  end
+
+  it "raises if started twice" do
+    allow(session_runner).to receive(:run).and_yield(session)
+
+    runtime.start!
+    wait_until { runtime.running? }
+
+    expect { runtime.start! }.to raise_error("runtime already running")
+
+    runtime.stop!
+    wait_until { !runtime.running? }
+  end
+
+  it "sleeps instead of pumping when the session does not support pump_once" do
+    session_without_pump = double("obs session", fetch_inventory: inventory)
+    sleep_calls = []
+
+    custom_sleeper = lambda do |seconds|
+      sleep_calls << seconds
+      mono_state.value += seconds
+      sleep(seconds / 50.0)
+    end
 
     runtime = described_class.new(
       state: state,
       inventory_store: inventory_store,
-      session_runner: runner,
+      session_runner: session_runner,
+      logger: logger,
       backoff: backoff,
-      heartbeat_interval: 10.0,
-      idle_sleep: 0.01,
+      heartbeat_interval: heartbeat_interval,
+      idle_sleep: idle_sleep,
       monotonic_clock: monotonic_clock,
-      sleeper: sleeper
+      sleeper: custom_sleeper
     )
+
+    allow(session_runner).to receive(:run).and_yield(session_without_pump)
 
     runtime.start!
 
-    wait_until { status["last_error"] == "runtime loop failed: StandardError: socket went sideways" }
-    wait_until { runner.run_calls >= 2 }
+    eventually do
+      expect(inventory_store).to have_received(:write_snapshot!).with(
+        scenes: inventory[:scenes],
+        scene_items_by_scene: inventory[:scene_items_by_scene]
+      )
+    end
 
-    expect(sleeps).not_to be_empty
-
-    runtime.stop!
-    wait_until { !runtime.running? }
-  end
-
-  it "marks the runtime down on stop" do
-    session = FakeSession.new(
-      inventory: {
-        scenes: [{ "sceneName" => "Clips" }],
-        scene_items_by_scene: { "Clips" => [] }
-      }
-    )
-
-    runtime = described_class.new(
-      state: state,
-      inventory_store: inventory_store,
-      session_runner: FakeSessionRunner.new(sessions: [session]),
-      heartbeat_interval: 10.0,
-      idle_sleep: 0.05,
-      monotonic_clock: monotonic_clock,
-      sleeper: sleeper
-    )
-
-    runtime.start!
-    wait_until { state.runtime_connected? }
+    wait_until { sleep_calls.include?(idle_sleep) }
 
     runtime.stop!
     wait_until { !runtime.running? }
 
-    expect(status["runtime_state"]).to eq("down")
-    expect(status["connected"]).to eq("false")
+    expect(sleep_calls).to include(idle_sleep)
   end
 end

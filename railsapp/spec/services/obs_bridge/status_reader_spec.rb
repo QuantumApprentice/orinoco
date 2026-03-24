@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe ObsBridge::StatusReader do
-  let(:redis) { FakeRedis.new }
+  let(:redis) { instance_double(Redis) }
   let(:keys) { ObsBridge::RedisKeys.new(bridge_id: "main") }
 
   subject(:reader) do
@@ -11,6 +11,11 @@ RSpec.describe ObsBridge::StatusReader do
       redis: redis,
       bridge_id: "main"
     )
+  end
+
+  before do
+    allow(redis).to receive(:hgetall).with(keys.status).and_return({})
+    allow(redis).to receive(:get).with(keys.scenes).and_return(nil)
   end
 
   it "returns sensible defaults when redis is empty" do
@@ -29,16 +34,26 @@ RSpec.describe ObsBridge::StatusReader do
   end
 
   it "reads status, scenes, and scene items from redis" do
-    redis.hset(keys.status, "bridge_id", "main")
-    redis.hset(keys.status, "desired_state", "enabled")
-    redis.hset(keys.status, "runtime_state", "up")
-    redis.hset(keys.status, "connected", "true")
-    redis.hset(keys.status, "capture_all_active", "true")
-    redis.hset(keys.status, "capture_all_until", "2026-03-23T18:15:00Z")
-    redis.hset(keys.status, "inventory_scene_count", "1")
-    redis.hset(keys.status, "last_error", "")
-    redis.set(keys.scenes, '[{"sceneName":"Clips"}]')
-    redis.set(keys.scene_items("Clips"), '[{"sceneItemId":1,"sourceName":"fight","sceneItemEnabled":true}]')
+    allow(redis).to receive(:hgetall).with(keys.status).and_return(
+      {
+        "bridge_id" => "main",
+        "desired_state" => "enabled",
+        "runtime_state" => "up",
+        "connected" => "true",
+        "capture_all_active" => "true",
+        "capture_all_until" => "2026-03-23T18:15:00Z",
+        "inventory_scene_count" => "1",
+        "last_error" => ""
+      }
+    )
+
+    allow(redis).to receive(:get).with(keys.scenes).and_return(
+      '[{"sceneName":"Clips"}]'
+    )
+
+    allow(redis).to receive(:get).with(keys.scene_items("Clips")).and_return(
+      '[{"sceneItemId":1,"sourceName":"fight","sceneItemEnabled":true}]'
+    )
 
     snapshot = reader.snapshot
 

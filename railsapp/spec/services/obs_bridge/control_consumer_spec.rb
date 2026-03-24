@@ -3,179 +3,135 @@
 require "rails_helper"
 
 RSpec.describe ObsBridge::ControlConsumer do
-  Message = Struct.new(:body, :receipt_handle)
-
   let(:queue_url) { "http://goaws:31040/000000000000/obs_bridge_control" }
+  let(:sqs) { instance_double(Aws::SQS::Client) }
+  let(:applier) { instance_double(ObsBridge::ControlApplier) }
+  let(:message_unwrapper) { class_double(ObsBridge::AwsMessage) }
+  let(:message_parser) { class_double(ObsBridge::ControlMessage) }
+  let(:logger) { ->(_msg) {} }
 
-  it "long-polls SQS with the configured wait time and max messages" do
-    sqs = FakeSqsClient.new(receive_batches: [[]])
-    redis = FakeRedis.new
-    state = ObsBridge::BridgeState.new(redis: redis, bridge_id: "main", default_enabled: false)
-    applier = ObsBridge::ControlApplier.new(state: state)
+  let(:message) { double("sqs message", body: '{"type":"obs.bridge.enable","bridge_id":"main"}', receipt_handle: "rh-1") }
+  let(:response) { double("receive_message_response", messages: messages) }
+  let(:messages) { [] }
 
-    consumer = described_class.new(
+  subject(:consumer) do
+    described_class.new(
       sqs: sqs,
       queue_url: queue_url,
       bridge_id: "main",
       applier: applier,
-      wait_time_seconds: 20,
-      max_number_of_messages: 1
-    )
-
-    consumer.run_once
-
-    expect(sqs.receive_calls).to eq(
-      [
-        {
-          queue_url: queue_url,
-          max_number_of_messages: 1,
-          wait_time_seconds: 20
-        }
-      ]
+      logger: logger,
+      wait_time_seconds: wait_time_seconds,
+      max_number_of_messages: max_number_of_messages,
+      message_unwrapper: message_unwrapper,
+      message_parser: message_parser
     )
   end
 
-  it "applies a valid enable message and deletes it" do
-    message = Message.new(
-      { type: "obs.bridge.enable", bridge_id: "main" }.to_json,
-      "rh-1"
-    )
+  let(:wait_time_seconds) { 20 }
+  let(:max_number_of_messages) { 1 }
 
-    sqs = FakeSqsClient.new(receive_batches: [[message]])
-    redis = FakeRedis.new
-    state = ObsBridge::BridgeState.new(redis: redis, bridge_id: "main", default_enabled: false)
-    signals = []
-    applier = ObsBridge::ControlApplier.new(state: state, signal_queue: signals)
+  before do
+    allow(sqs).to receive(:receive_message).and_return(response)
+    allow(sqs).to receive(:delete_message)
+    allow(applier).to receive(:apply)
+  end
 
-    consumer = described_class.new(
-      sqs: sqs,
+  it "long-polls SQS with the configured wait time and max messages" do
+    consumer.run_once
+
+    expect(sqs).to have_received(:receive_message).with(
       queue_url: queue_url,
-      bridge_id: "main",
-      applier: applier
-    )
-
-    expect(consumer.run_once).to eq([message].each { |_m| nil })
-
-    expect(state.desired_enabled?).to be(true)
-    expect(signals).to eq([ObsBridge::Cmd.reconcile])
-    expect(sqs.delete_calls).to eq(
-      [
-        {
-          queue_url: queue_url,
-          receipt_handle: "rh-1"
-        }
-      ]
+      max_number_of_messages: 1,
+      wait_time_seconds: 20
     )
   end
 
-  it "drops malformed JSON and deletes the message" do
-    message = Message.new("{ nope", "rh-2")
+  it "applies a valid message and deletes it" do
+    control_message = ObsBridge::ControlMessage::Enable.new(bridge_id: "main", command_id: "abc")
+    payload = { "type" => "obs.bridge.enable", "bridge_id" => "main" }
+    messages.replace([message])
 
-    sqs = FakeSqsClient.new(receive_batches: [[message]])
-    redis = FakeRedis.new
-    state = ObsBridge::BridgeState.new(redis: redis, bridge_id: "main", default_enabled: false)
-    applier = ObsBridge::ControlApplier.new(state: state)
-
-    consumer = described_class.new(
-      sqs: sqs,
-      queue_url: queue_url,
-      bridge_id: "main",
-      applier: applier
-    )
+    allow(message_unwrapper).to receive(:unwrap).with(message).and_return(payload)
+    allow(message_parser).to receive(:parse).with(payload, expected_bridge_id: "main").and_return(control_message)
+    allow(applier).to receive(:apply).with(control_message).and_return(:enabled)
 
     consumer.run_once
 
-    expect(sqs.delete_calls).to eq(
-      [
-        {
-          queue_url: queue_url,
-          receipt_handle: "rh-2"
-        }
-      ]
+    expect(message_unwrapper).to have_received(:unwrap).with(message)
+    expect(message_parser).to have_received(:parse).with(payload, expected_bridge_id: "main")
+    expect(applier).to have_received(:apply).with(control_message)
+    expect(sqs).to have_received(:delete_message).with(
+      queue_url: queue_url,
+      receipt_handle: "rh-1"
     )
   end
 
-  it "drops unknown message types and deletes the message" do
-    message = Message.new(
-      { type: "obs.bridge.spaghetti", bridge_id: "main" }.to_json,
-      "rh-3"
-    )
+  it "drops invalid payloads and deletes the message" do
+    messages.replace([message])
 
-    sqs = FakeSqsClient.new(receive_batches: [[message]])
-    redis = FakeRedis.new
-    state = ObsBridge::BridgeState.new(redis: redis, bridge_id: "main", default_enabled: false)
-    applier = ObsBridge::ControlApplier.new(state: state)
-
-    consumer = described_class.new(
-      sqs: sqs,
-      queue_url: queue_url,
-      bridge_id: "main",
-      applier: applier
-    )
+    allow(message_unwrapper).to receive(:unwrap).with(message)
+      .and_raise(ObsBridge::AwsMessage::InvalidPayload, "bad payload")
 
     consumer.run_once
 
-    expect(sqs.delete_calls).to eq(
-      [
-        {
-          queue_url: queue_url,
-          receipt_handle: "rh-3"
-        }
-      ]
+    expect(sqs).to have_received(:delete_message).with(
+      queue_url: queue_url,
+      receipt_handle: "rh-1"
     )
+    expect(applier).not_to have_received(:apply)
   end
 
-  it "ignores commands for other bridges and still deletes them" do
-    message = Message.new(
-      { type: "obs.bridge.enable", bridge_id: "other" }.to_json,
-      "rh-4"
-    )
+  it "drops invalid control messages and deletes the message" do
+    payload = { "type" => "obs.bridge.spaghetti", "bridge_id" => "main" }
+    messages.replace([message])
 
-    sqs = FakeSqsClient.new(receive_batches: [[message]])
-    redis = FakeRedis.new
-    state = ObsBridge::BridgeState.new(redis: redis, bridge_id: "main", default_enabled: false)
-    applier = ObsBridge::ControlApplier.new(state: state)
-
-    consumer = described_class.new(
-      sqs: sqs,
-      queue_url: queue_url,
-      bridge_id: "main",
-      applier: applier
-    )
+    allow(message_unwrapper).to receive(:unwrap).with(message).and_return(payload)
+    allow(message_parser).to receive(:parse).with(payload, expected_bridge_id: "main")
+      .and_raise(ObsBridge::ControlMessage::Invalid, "unknown type")
 
     consumer.run_once
 
-    expect(state.desired_enabled?).to be(false)
-    expect(sqs.delete_calls).to eq(
-      [
-        {
-          queue_url: queue_url,
-          receipt_handle: "rh-4"
-        }
-      ]
+    expect(sqs).to have_received(:delete_message).with(
+      queue_url: queue_url,
+      receipt_handle: "rh-1"
+    )
+    expect(applier).not_to have_received(:apply)
+  end
+
+  it "passes ignored messages to the applier and still deletes them" do
+    ignored_message = ObsBridge::ControlMessage::Ignored.new(
+      bridge_id: "main",
+      actual_bridge_id: "other",
+      command_id: "abc"
+    )
+    payload = { "type" => "obs.bridge.enable", "bridge_id" => "other" }
+    messages.replace([message])
+
+    allow(message_unwrapper).to receive(:unwrap).with(message).and_return(payload)
+    allow(message_parser).to receive(:parse).with(payload, expected_bridge_id: "main").and_return(ignored_message)
+    allow(applier).to receive(:apply).with(ignored_message).and_return(:ignored)
+
+    consumer.run_once
+
+    expect(applier).to have_received(:apply).with(ignored_message)
+    expect(sqs).to have_received(:delete_message).with(
+      queue_url: queue_url,
+      receipt_handle: "rh-1"
     )
   end
 
   it "does not delete a message when the applier raises unexpectedly" do
-    message = Message.new(
-      { type: "obs.bridge.enable", bridge_id: "main" }.to_json,
-      "rh-5"
-    )
+    control_message = ObsBridge::ControlMessage::Enable.new(bridge_id: "main", command_id: "abc")
+    payload = { "type" => "obs.bridge.enable", "bridge_id" => "main" }
+    messages.replace([message])
 
-    sqs = FakeSqsClient.new(receive_batches: [[message]])
-    applier = instance_double(ObsBridge::ControlApplier)
-
-    allow(applier).to receive(:apply).and_raise(StandardError, "boom")
-
-    consumer = described_class.new(
-      sqs: sqs,
-      queue_url: queue_url,
-      bridge_id: "main",
-      applier: applier
-    )
+    allow(message_unwrapper).to receive(:unwrap).with(message).and_return(payload)
+    allow(message_parser).to receive(:parse).with(payload, expected_bridge_id: "main").and_return(control_message)
+    allow(applier).to receive(:apply).with(control_message).and_raise(StandardError, "boom")
 
     consumer.run_once
 
-    expect(sqs.delete_calls).to be_empty
+    expect(sqs).not_to have_received(:delete_message)
   end
 end

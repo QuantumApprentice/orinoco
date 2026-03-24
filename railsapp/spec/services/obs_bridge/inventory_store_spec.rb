@@ -4,7 +4,8 @@ require "rails_helper"
 require "json"
 
 RSpec.describe ObsBridge::InventoryStore do
-  let(:redis) { FakeRedis.new }
+  let(:redis) { instance_double(Redis) }
+  let(:pipe) { instance_double(Redis) }
   let(:clock_state) { Struct.new(:now).new(Time.utc(2026, 3, 23, 18, 0, 0)) }
   let(:clock) { -> { clock_state.now } }
   let(:keys) { ObsBridge::RedisKeys.new(bridge_id: "main") }
@@ -17,16 +18,13 @@ RSpec.describe ObsBridge::InventoryStore do
     )
   end
 
-  def stored_scenes
-    JSON.parse(redis.get(keys.scenes))
-  end
+  before do
+    allow(redis).to receive(:get).and_return(nil)
+    allow(redis).to receive(:pipelined).and_yield(pipe)
 
-  def stored_items(scene_name)
-    JSON.parse(redis.get(keys.scene_items(scene_name)))
-  end
-
-  def status
-    redis.hgetall(keys.status)
+    allow(pipe).to receive(:set)
+    allow(pipe).to receive(:del)
+    allow(pipe).to receive(:hset)
   end
 
   it "writes scenes and per-scene items into redis" do
@@ -45,28 +43,38 @@ RSpec.describe ObsBridge::InventoryStore do
       }
     )
 
-    expect(stored_scenes).to eq(
+    expect(pipe).to have_received(:set).with(
+      keys.scenes,
       [
-        { "sceneName" => "Clips" },
-        { "sceneName" => "Starting Soon" }
-      ]
+        { sceneName: "Clips" },
+        { sceneName: "Starting Soon" }
+      ].to_json
     )
 
-    expect(stored_items("Clips")).to eq(
+    expect(pipe).to have_received(:set).with(
+      keys.scene_items("Clips"),
       [
-        { "sceneItemId" => 11, "sourceName" => "fight", "enabled" => true }
-      ]
+        { sceneItemId: 11, sourceName: "fight", enabled: true }
+      ].to_json
     )
 
-    expect(stored_items("Starting Soon")).to eq(
+    expect(pipe).to have_received(:set).with(
+      keys.scene_items("Starting Soon"),
       [
-        { "sceneItemId" => 21, "sourceName" => "countdown", "enabled" => true }
-      ]
+        { sceneItemId: 21, sourceName: "countdown", enabled: true }
+      ].to_json
     )
 
-    expect(status).to include(
-      "inventory_refreshed_at" => "2026-03-23T18:00:00.000000Z",
-      "inventory_scene_count" => "2"
+    expect(pipe).to have_received(:hset).with(
+      keys.status,
+      "inventory_refreshed_at",
+      "2026-03-23T18:00:00.000000Z"
+    )
+
+    expect(pipe).to have_received(:hset).with(
+      keys.status,
+      "inventory_scene_count",
+      "2"
     )
   end
 
@@ -78,10 +86,18 @@ RSpec.describe ObsBridge::InventoryStore do
       scene_items_by_scene: {}
     )
 
-    expect(stored_items("Clips")).to eq([])
+    expect(pipe).to have_received(:set).with(
+      keys.scene_items("Clips"),
+      [].to_json
+    )
   end
 
   it "removes stale scene item keys when the inventory changes" do
+    allow(redis).to receive(:get).with(keys.scenes).and_return(
+      nil,
+      [{ sceneName: "Old Scene" }].to_json
+    )
+
     store.write_snapshot!(
       scenes: [
         { sceneName: "Old Scene" }
@@ -92,8 +108,6 @@ RSpec.describe ObsBridge::InventoryStore do
         ]
       }
     )
-
-    expect(redis.get(keys.scene_items("Old Scene"))).not_to be_nil
 
     clock_state.now += 10
 
@@ -108,15 +122,20 @@ RSpec.describe ObsBridge::InventoryStore do
       }
     )
 
-    expect(redis.get(keys.scene_items("Old Scene"))).to be_nil
-    expect(stored_items("New Scene")).to eq(
+    expect(pipe).to have_received(:del).with(keys.scene_items("Old Scene"))
+    expect(pipe).to have_received(:set).with(
+      keys.scene_items("New Scene"),
       [
-        { "sceneItemId" => 2, "sourceName" => "fresh" }
-      ]
+        { sceneItemId: 2, sourceName: "fresh" }
+      ].to_json
     )
-    expect(status["inventory_refreshed_at"]).to eq("2026-03-23T18:00:10.000000Z")
-  end
 
+    expect(pipe).to have_received(:hset).with(
+      keys.status,
+      "inventory_refreshed_at",
+      "2026-03-23T18:00:10.000000Z"
+    )
+  end
   it "accepts simple string scene entries too" do
     store.write_snapshot!(
       scenes: ["Clips"],
@@ -127,18 +146,23 @@ RSpec.describe ObsBridge::InventoryStore do
       }
     )
 
-    expect(stored_scenes).to eq(["Clips"])
-    expect(stored_items("Clips")).to eq(
+    expect(pipe).to have_received(:set).with(
+      keys.scenes,
+      ["Clips"].to_json
+    )
+
+    expect(pipe).to have_received(:set).with(
+      keys.scene_items("Clips"),
       [
-        { "sceneItemId" => 5, "sourceName" => "fight" }
-      ]
+        { sceneItemId: 5, sourceName: "fight" }
+      ].to_json
     )
   end
 
   it "raises when a scene entry has no usable name" do
     expect do
       store.write_snapshot!(
-        scenes: [{ nonsense: "??? " }],
+        scenes: [{ nonsense: "???" }],
         scene_items_by_scene: {}
       )
     end.to raise_error(ArgumentError, /scene must have a name/)
