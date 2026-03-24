@@ -6,13 +6,24 @@ class Admin::ObsBridgesController < ApplicationController
   end
 
   def start
+    ObsBridge::StatusWriter.new(
+      redis: redis_client,
+      bridge_id: "obs"
+    ).mark_start_requested
+
     control_publisher.start!
+
     redirect_back_to_bridge("Bridge start requested.")
   rescue StandardError => e
     redirect_back_to_bridge("Failed to request bridge start: #{e.message}", alert: true)
   end
 
   def stop
+    ObsBridge::StatusWriter.new(
+      redis: redis_client,
+      bridge_id: "obs"
+    ).mark_stop_requested
+
     control_publisher.stop!
     redirect_back_to_bridge("Bridge stop requested.")
   rescue StandardError => e
@@ -37,6 +48,7 @@ class Admin::ObsBridgesController < ApplicationController
   private
 
   def bridge_id
+    return 'obs'
     params[:id].presence || ENV.fetch("OBS_BRIDGE_ID", "main")
   end
 
@@ -50,7 +62,7 @@ class Admin::ObsBridgesController < ApplicationController
   def control_publisher
     ObsBridge::ControlPublisher.new(
       sqs: sqs_client,
-      queue_url: ENV.fetch("OBS_BRIDGE_CONTROL_QUEUE_URL"),
+      queue_url: control_queue_url,
       bridge_id: bridge_id
     )
   end
@@ -66,6 +78,11 @@ class Admin::ObsBridgesController < ApplicationController
       access_key_id: "fake",
       secret_access_key: "fake"
     )
+  end
+
+  def control_queue_url
+    Rails.application.config.x.orinoco.messaging_topology
+      .queue_url(Orinoco::Messaging::Names::OBS_BRIDGE_CONTROL_QUEUE)
   end
 
   def redirect_back_to_bridge(message, alert: false)

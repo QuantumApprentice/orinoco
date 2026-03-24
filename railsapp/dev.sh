@@ -18,6 +18,9 @@ routes | r)
 spec | sp)
   run "'spec'"
   ;;
+bridge | obs)
+  run "'runner', 'ObsBridgeWorker.new.run'"
+  ;;
 tailwind | tw)
   run "'tailwindcss:build'"
   ;;
