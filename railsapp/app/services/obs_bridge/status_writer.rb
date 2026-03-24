@@ -37,7 +37,7 @@ class ObsBridge::StatusWriter
       bridge_id: @bridge_id
     ).snapshot[:status]
 
-    ObsBridge::StatusBroadcaster.new(bridge_id: @bridge_id).broadcast!
+    ObsBridge::StatusBroadcaster.new(redis: @redis, bridge_id: @bridge_id).broadcast!
   end
 
   def timestamp
