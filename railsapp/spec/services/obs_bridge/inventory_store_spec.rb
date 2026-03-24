@@ -4,11 +4,26 @@ require "rails_helper"
 require "json"
 
 RSpec.describe ObsBridge::InventoryStore do
+
+
+
   let(:redis) { instance_double(Redis) }
   let(:pipe) { instance_double(Redis) }
   let(:clock_state) { Struct.new(:now).new(Time.utc(2026, 3, 23, 18, 0, 0)) }
   let(:clock) { -> { clock_state.now } }
   let(:keys) { ObsBridge::RedisKeys.new(bridge_id: "main") }
+  let(:broadcaster) { instance_double(ObsBridge::StatusBroadcaster, broadcast!: true) }
+
+  before do
+    allow(redis).to receive(:get).and_return(nil)
+    allow(redis).to receive(:pipelined).and_yield(pipe)
+
+    allow(pipe).to receive(:set)
+    allow(pipe).to receive(:del)
+    allow(pipe).to receive(:hset)
+
+    allow(ObsBridge::StatusBroadcaster).to receive(:new).and_return(broadcaster)
+  end
 
   subject(:store) do
     described_class.new(

@@ -35,6 +35,7 @@ module ObsBridge
         pipe.hset(@keys.status, "inventory_refreshed_at", now.iso8601(6))
         pipe.hset(@keys.status, "inventory_scene_count", scene_names.length.to_s)
       end
+      ObsBridge::StatusBroadcaster.new(bridge_id: @keys.bridge_id, redis: @redis).broadcast!
     end
 
     private

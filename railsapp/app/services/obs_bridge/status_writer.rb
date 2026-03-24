@@ -37,15 +37,7 @@ class ObsBridge::StatusWriter
       bridge_id: @bridge_id
     ).snapshot[:status]
 
-    Turbo::StreamsChannel.broadcast_replace_to(
-      "obs_bridge_status:#{@bridge_id}",
-      target: "obs_bridge_status_panel_#{@bridge_id}",
-      partial: "admin/obs_bridges/status_panel",
-      locals: {
-        bridge_id: @bridge_id,
-        status: bridge_status
-      }
-    )
+    ObsBridge::StatusBroadcaster.new(bridge_id: @bridge_id).broadcast!
   end
 
   def timestamp
