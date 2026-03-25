@@ -49,7 +49,8 @@ class Admin::ObsBridgesController < ApplicationController
 
   def bridge_id
     return 'obs'
-    params[:id].presence || ENV.fetch("OBS_BRIDGE_ID", "main")
+    # TODO not all bridges are the obs bridge?
+    # params[:id].presence || Rails.application.config.x.obs_bridge.bridge_id
   end
 
   def status_reader
@@ -68,16 +69,11 @@ class Admin::ObsBridgesController < ApplicationController
   end
 
   def redis_client
-    @redis_client ||= Redis.new(url: ENV.fetch("SCOREBOARD_REDIS_URL"))
+    @redis_client ||= Redis.new(url: Rails.application.config.x.scoreboard.redis_url)
   end
 
   def sqs_client
-    @sqs_client ||= Aws::SQS::Client.new(
-      region: "us-east-1",
-      endpoint: ENV.fetch("EVENT_PIPELINE_GOAWS_URL"),
-      access_key_id: "fake",
-      secret_access_key: "fake"
-    )
+    @sqs_client ||= Aws::SQS::Client.new(**Rails.configuration.x.event_pipeline.aws_client_options)
   end
 
   def control_queue_url
