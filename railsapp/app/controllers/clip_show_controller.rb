@@ -4,7 +4,6 @@ class ClipShowController < ApplicationController
     @clips=SceneIndex.new(scene:"Clips")
     OBSWS::Requests::Client.new(host: @host, port: @port).run do |req|
       @clips.refresh!(req)
-      # @scenes.get_all_scenes(req)
     end
   end
 
@@ -25,16 +24,33 @@ class ClipShowController < ApplicationController
   # make a Hash that has scene name as key
   # and the clips as an Array for the value
   def get_scenes
-      @scenes = Hash.new
+    @scenes = Hash.new
+    @scene_name = params[:scenes];
 
-      OBSWS::Requests::Client.new(host: @host, port: @port).run do |client|
-      client.get_scene_list.scenes.each do |scene|
-        clip_cache = SceneIndex.new(scene: scene[:sceneName])
+
+    OBSWS::Requests::Client.new(host: @host, port: @port).run do |client|
+      @scene_names = client.get_scene_list.scenes.map { |s|
+        s[:sceneName]
+      }
+
+      @clips = []
+
+      if (@scene_name)
+        clip_cache = SceneIndex.new(scene: @scene_name)
         clip_cache.refresh!(client)
-        @scenes[scene[:sceneName]] = clip_cache.by_name
+        @clips = clip_cache.by_name
       end
+
+
+
+
+
+    #   client.get_scene_list.scenes.each do |scene|
+    #     clip_cache = SceneIndex.new(scene: scene[:sceneName])
+    #     clip_cache.refresh!(client)
+    #     @scenes[scene[:sceneName]] = clip_cache.by_name
+    #   end
     end
   end
-
 
 end

@@ -36,6 +36,7 @@ event pipeline config - from the web page we'll want to be able to maintain what
 
 figure out if we care about multi user access.  password sniffing is bad and encryption is tricky, but profiles is still a thing? devise ruby gem
 
+need a global kill switch for all the bridges in case the user doesn't want stuff running all the time
 
 
 done:

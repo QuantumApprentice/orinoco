@@ -1,22 +1,22 @@
 <div class="w-full space-y-8">
-  <% @scenes.each do |scene_name, clips| %>
-    <section class="w-full">
-      <h2 class="font-bold text-xl mb-3">
-        <%= scene_name %>
-      </h2>
+  <div class="flex flex-wrap gap-2 w-full">
+    <% @scene_names.each do |scene_name| %>
+      <section >
+        <h2 class="font-bold text-xl mb-3">
+          <%= link_to scene_name, clip_show_get_scenes_path(scenes: scene_name)%>
+        </h2>
 
-      <div class="flex flex-wrap gap-2 w-full">
-        <% clips.each do |inner_val| %>
-          <%= button_to inner_val[0],
-            clip_show_play_path(
-              clip_name: inner_val[0],
-              id: inner_val[1],
-              scene_name: scene_name
-            ),
-            class: "block px-3 py-2 rounded bg-blue-500 text-white text-center"
-          %>
-        <% end %>
-      </div>
-    </section>
+      </section>
+    <% end %>
+  </div>
+  <% @clips.each do |inner_val| %>
+    <%= button_to inner_val[0],
+      clip_show_play_path(
+        clip_name: inner_val[0],
+        id: inner_val[1],
+        scene_name: @scene_name
+      ),
+      class: "block px-3 py-2 rounded bg-blue-500 text-white text-center"
+    %>
   <% end %>
 </div>
