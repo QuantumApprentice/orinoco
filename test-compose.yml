@@ -13,3 +13,6 @@ include:
 - path: "./compose/railsapp.yml"
   project_directory: "./"
   env_file: "./test.env"
+- path: "./compose/redis.yml"
+  project_directory: "./"
+  env_file: "./production.env"

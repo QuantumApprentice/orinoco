@@ -3,7 +3,9 @@
 # not a terminal started via bin/rails console! Add "console" to any action or any ERB template view
 # to make the web console appear.
 development:
-  adapter: async
+  adapter: redis
+  url: <%= ENV.fetch("SCOREBOARD_REDIS_URL", "set_scoreboard_redis_url") %>
+  channel_prefix: orinoco_development
 
 test:
   adapter: test

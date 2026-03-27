@@ -72,3 +72,7 @@ gem "aws-sdk-sqs", "~> 1.111"
 gem "aws-sdk-sns", "~> 1.112"
 
 gem "view_component", "~> 4.5"
+
+gem "redis", "~> 5.4"
+
+gem "fiddle", "~> 1.1"

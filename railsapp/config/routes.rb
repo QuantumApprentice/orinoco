@@ -6,6 +6,15 @@ Rails.application.routes.draw do
 
   resource :obs_config, only: [:show, :edit, :update, :create]
 
+  namespace :admin do
+    resources :obs_bridges, only: [:show], param: :id do
+      post :start, on: :member
+      post :stop, on: :member
+      post :refresh, on: :member
+      post :capture_all, on: :member
+    end
+  end
+
   # root "clip_show#index"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

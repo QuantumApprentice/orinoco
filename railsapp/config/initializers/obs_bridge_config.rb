@@ -1,0 +1,14 @@
+# config/initializers/obs_bridge_config.rb
+Rails.application.config.x.scoreboard.redis_url =
+  ENV.fetch("SCOREBOARD_REDIS_URL")
+
+Rails.application.config.x.obs_bridge.bridge_id =
+  ENV.fetch("OBS_BRIDGE_ID", "obs")
+
+Rails.application.config.x.obs_bridge.default_enabled = false
+
+Rails.application.config.x.obs_bridge.obs_host =
+  ENV.fetch("OBS_HOST")
+
+Rails.application.config.x.obs_bridge.obs_port =
+  Integer(ENV.fetch("OBS_PORT", "4455"))
