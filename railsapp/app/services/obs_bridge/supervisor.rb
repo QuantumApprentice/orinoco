@@ -5,14 +5,14 @@ module ObsBridge
     def initialize(
       state:,
       control_consumer:,
-      runtime:,
+      runtime_factory:,
       signal_queue:,
       logger: nil,
       idle_sleep: 0.1
     )
       @state = state
       @control_consumer = control_consumer
-      @runtime = runtime
+      @runtime_factory = runtime_factory
       @signal_queue = signal_queue
       @logger = logger || ->(msg) { warn msg }
       @idle_sleep = idle_sleep
@@ -21,6 +21,7 @@ module ObsBridge
       @stop_requested = false
       @running = false
       @control_thread = nil
+      @runtime = nil
     end
 
     def run
@@ -58,12 +59,9 @@ module ObsBridge
 
     def start_control_thread!
       @control_thread = Thread.new do
-        @control_consumer.run(stop: -> { stop_requested? })
-      rescue StandardError => e
-        message = "control consumer failed: #{e.class}: #{e.message}"
-        @state.set_last_error!(message)
-        @logger.call("[obs-bridge/supervisor] #{message}")
-        stop!
+        with_failure("control consumer", stop_supervisor: true) do
+          @control_consumer.run(stop: -> { stop_requested? })
+        end
       end
     end
 
@@ -77,8 +75,7 @@ module ObsBridge
 
     def drain_signals
       loop do
-        signal = @signal_queue.pop(true)
-        handle_signal(signal)
+        handle_signal(@signal_queue.pop(true))
       rescue ThreadError
         break
       end
@@ -96,54 +93,65 @@ module ObsBridge
     end
 
     def reconcile_runtime!
-      if @state.desired_enabled?
-        start_runtime_unless_running!
-      else
-        stop_runtime_if_running!
-      end
+      @state.desired_enabled? ? start_runtime_unless_running! : stop_runtime_if_running!
     end
 
     def start_runtime_unless_running!
-      return if @runtime.running?
+      return if runtime_running?
 
       @logger.call("[obs-bridge/supervisor] starting runtime")
-      @runtime.start!
-    rescue StandardError => e
-      message = "runtime start failed: #{e.class}: #{e.message}"
-      @state.set_last_error!(message)
-      @logger.call("[obs-bridge/supervisor] #{message}")
+
+      with_failure("runtime start", clear_runtime: true) do
+        @runtime = @runtime_factory.call
+        @runtime.start!
+      end
     end
 
     def stop_runtime_if_running!
-      return unless @runtime.running?
-
-      @logger.call("[obs-bridge/supervisor] stopping runtime")
-      @runtime.stop!
-    rescue StandardError => e
-      message = "runtime stop failed: #{e.class}: #{e.message}"
-      @state.set_last_error!(message)
-      @logger.call("[obs-bridge/supervisor] #{message}")
+      with_running_runtime("runtime stop", clear_runtime: true) do |runtime|
+        @logger.call("[obs-bridge/supervisor] stopping runtime")
+        runtime.stop!
+      end
     end
 
     def refresh_inventory!
-      return unless @runtime.running?
+      with_running_runtime("inventory refresh") do |runtime|
+        @logger.call("[obs-bridge/supervisor] refreshing inventory")
+        runtime.refresh_inventory!
+      end
+    end
 
-      @logger.call("[obs-bridge/supervisor] refreshing inventory")
-      @runtime.refresh_inventory!
+    def shutdown_runtime
+      with_running_runtime("runtime shutdown", clear_runtime: true) do |runtime|
+        runtime.stop!
+      end
+    end
+
+    def with_running_runtime(action, clear_runtime: false)
+      runtime = @runtime
+      return unless runtime&.running?
+
+      with_failure(action, clear_runtime: clear_runtime) do
+        yield runtime
+      end
+    end
+
+    def with_failure(action, clear_runtime: false, stop_supervisor: false)
+      yield
     rescue StandardError => e
-      message = "inventory refresh failed: #{e.class}: #{e.message}"
+      @runtime = nil if clear_runtime
+      report_failure(action, e)
+      stop! if stop_supervisor
+    end
+
+    def report_failure(action, error)
+      message = "#{action} failed: #{error.class}: #{error.message}"
       @state.set_last_error!(message)
       @logger.call("[obs-bridge/supervisor] #{message}")
     end
 
-    def shutdown_runtime
-      return unless @runtime.running?
-
-      @runtime.stop!
-    rescue StandardError => e
-      message = "runtime shutdown failed: #{e.class}: #{e.message}"
-      @state.set_last_error!(message)
-      @logger.call("[obs-bridge/supervisor] #{message}")
+    def runtime_running?
+      @runtime&.running? || false
     end
 
     def stop_requested?

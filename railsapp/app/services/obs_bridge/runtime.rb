@@ -6,6 +6,8 @@ module ObsBridge
       state:,
       inventory_store:,
       session_runner:,
+      affordance_host:,
+      affordance_context:,
       logger: nil,
       backoff: nil,
       heartbeat_interval: 5.0,
@@ -16,6 +18,8 @@ module ObsBridge
       @state = state
       @inventory_store = inventory_store
       @session_runner = session_runner
+      @affordance_host = affordance_host
+      @affordance_context = affordance_context
       @logger = logger || ->(msg) { warn msg }
       @backoff = backoff || Backoff.new(sleeper: sleeper)
       @heartbeat_interval = heartbeat_interval
@@ -55,10 +59,11 @@ module ObsBridge
     end
 
     def refresh_inventory!
-      return unless running?
+      enqueue_command!(:refresh_inventory)
+    end
 
-      @command_queue << :refresh_inventory
-      true
+    def enqueue_obs_request!(request)
+      enqueue_command!(request)
     end
 
     def running?
@@ -68,72 +73,106 @@ module ObsBridge
     private
 
     def run_loop
-      until stop_requested?
-        begin
-          @logger.call("[obs-bridge/runtime] connecting to OBS")
-
-          @session_runner.run do |session|
-            @backoff.reset!
-            @state.connected!
-            @state.heartbeat!
-
-            refresh_inventory_with(session)
-            connected_loop(session)
-          end
-
-          @state.disconnected!
-        rescue StandardError => e
-          break if stop_requested?
-
-          message = "runtime loop failed: #{e.class}: #{e.message}"
-          @state.disconnected!(error: message)
-          @logger.call("[obs-bridge/runtime] #{message}")
-          @backoff.snooze!(label: "obs-bridge/runtime")
-        end
-      end
+      run_sessions_until_stopped
     ensure
-      @state.disconnected!
-      @mutex.synchronize do
-        @running = false
-        @thread = nil
+      disconnect_runtime!
+      mark_stopped!
+    end
+
+    def run_sessions_until_stopped
+      until stop_requested?
+        with_runtime_failure do
+          run_session
+        end
       end
     end
 
-    def connected_loop(session)
+    def run_session
+      @logger.call("[obs-bridge/runtime] connecting to OBS")
+
+      @session_runner.run(event_types: @affordance_host.event_types) do |session|
+        @backoff.reset!
+        @state.connected!
+        @state.heartbeat!
+
+        refresh_inventory_with(session)
+        serve_connected_session(session)
+      end
+
+      @state.disconnected!
+    end
+
+    def serve_connected_session(session)
       next_heartbeat_at = monotonic_now + @heartbeat_interval
 
       until stop_requested?
-        break if drain_commands(session) == :stop
+        return if stop_command_received?(session)
 
-        now = monotonic_now
-        if now >= next_heartbeat_at
-          @state.heartbeat!
-          next_heartbeat_at = now + @heartbeat_interval
-        end
-
-        if session.respond_to?(:pump_once)
-          session.pump_once(timeout: @idle_sleep)
-        else
-          @sleeper.call(@idle_sleep)
-        end
+        dispatch_events(session)
+        next_heartbeat_at = heartbeat_if_due(monotonic_now, next_heartbeat_at)
+        idle_with_session(session)
       end
+    end
+
+    def stop_command_received?(session)
+      drain_commands(session) == :stop
     end
 
     def drain_commands(session)
       loop do
         command = @command_queue.pop(true)
-
-        case command
-        when :stop
-          return :stop
-        when :refresh_inventory
-          refresh_inventory_with(session)
-        else
-          @logger.call("[obs-bridge/runtime] ignoring unknown command #{command.inspect}")
-        end
+        result = handle_command(command, session)
+        return result if result == :stop
       rescue ThreadError
         return :continue
       end
+    end
+
+    def handle_command(command, session)
+      case command
+      when :stop
+        :stop
+      when :refresh_inventory
+        refresh_inventory_with(session)
+        :continue
+      when Hash
+        apply_obs_request(session, command)
+        :continue
+      else
+        @logger.call("[obs-bridge/runtime] ignoring unknown command #{command.inspect}")
+        :continue
+      end
+    end
+
+    def apply_obs_request(session, request)
+      session.apply_request(request)
+    end
+
+    def dispatch_events(session)
+      return unless session.respond_to?(:poll_events)
+
+      Array(session.poll_events(timeout: 0)).each do |event|
+        @affordance_host.dispatch(
+          event.fetch("eventType"),
+          event: event.fetch("eventData"),
+          context: @affordance_context
+        )
+      end
+    end
+
+    def idle_with_session(session)
+      if session.respond_to?(:pump_once)
+        session.pump_once(timeout: @idle_sleep)
+      else
+        @sleeper.call(@idle_sleep)
+      end
+    end
+
+    def heartbeat_if_due(now, next_heartbeat_at)
+      return next_heartbeat_at if now < next_heartbeat_at
+
+      @state.heartbeat!
+      now + @heartbeat_interval
     end
 
     def refresh_inventory_with(session)
@@ -143,6 +182,35 @@ module ObsBridge
         scenes: inventory.fetch(:scenes),
         scene_items_by_scene: inventory.fetch(:scene_items_by_scene)
       )
+    end
+
+    def enqueue_command!(command)
+      return false unless running?
+
+      @command_queue << command
+      true
+    end
+
+    def with_runtime_failure
+      yield
+    rescue StandardError => e
+      raise if stop_requested?
+
+      message = "runtime loop failed: #{e.class}: #{e.message}"
+      @state.disconnected!(error: message)
+      @logger.call("[obs-bridge/runtime] #{message}")
+      @backoff.snooze!(label: "obs-bridge/runtime")
+    end
+
+    def disconnect_runtime!
+      @state.disconnected!
+    end
+
+    def mark_stopped!
+      @mutex.synchronize do
+        @running = false
+        @thread = nil
+      end
     end
 
     def stop_requested?
