@@ -13,6 +13,7 @@ class ObsBridgeWorker
     @supervisor ||= ObsBridge::Supervisor.new(
       state: state,
       control_consumer: control_consumer,
+      command_consumer: command_consumer,
       runtime_factory: method(:build_runtime),
       signal_queue: signal_queue
     )
@@ -61,6 +62,14 @@ class ObsBridgeWorker
       queue_url: topology.queue_url(Orinoco::Messaging::Names::OBS_BRIDGE_CONTROL_QUEUE),
       bridge_id: bridge_id,
       applier: applier
+    )
+  end
+
+  def command_consumer
+    @command_consumer ||= ObsBridge::CommandConsumer.new(
+      sqs: sqs,
+      queue_url: topology.queue_url(Orinoco::Messaging::Names::OBS_BRIDGE_COMMAND_QUEUE),
+      signal_queue: signal_queue
     )
   end
 

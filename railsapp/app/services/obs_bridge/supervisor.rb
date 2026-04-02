@@ -5,6 +5,7 @@ module ObsBridge
     def initialize(
       state:,
       control_consumer:,
+      command_consumer:,
       runtime_factory:,
       signal_queue:,
       logger: nil,
@@ -12,6 +13,7 @@ module ObsBridge
     )
       @state = state
       @control_consumer = control_consumer
+      @command_consumer = command_consumer
       @runtime_factory = runtime_factory
       @signal_queue = signal_queue
       @logger = logger || ->(msg) { warn msg }
@@ -21,6 +23,7 @@ module ObsBridge
       @stop_requested = false
       @running = false
       @control_thread = nil
+      @command_thread = nil
       @runtime = nil
     end
 
@@ -33,6 +36,7 @@ module ObsBridge
       end
 
       start_control_thread!
+      start_command_thread!
       reconcile_runtime!
 
       until stop_requested?
@@ -41,6 +45,7 @@ module ObsBridge
       end
     ensure
       shutdown_runtime
+      join_command_thread
       join_control_thread
       @mutex.synchronize { @running = false }
     end
@@ -65,12 +70,28 @@ module ObsBridge
       end
     end
 
+    def start_command_thread!
+      @command_thread = Thread.new do
+        with_failure("command consumer", stop_supervisor: true) do
+          @command_consumer.run(stop: -> { stop_requested? })
+        end
+      end
+    end
+
     def join_control_thread
       thread = @control_thread
       return unless thread
 
       thread.join(1)
       @control_thread = nil
+    end
+
+    def join_command_thread
+      thread = @command_thread
+      return unless thread
+
+      thread.join(1)
+      @command_thread = nil
     end
 
     def drain_signals
@@ -87,6 +108,8 @@ module ObsBridge
         reconcile_runtime!
       when Cmd::RefreshInventory
         refresh_inventory!
+      when Hash
+        enqueue_obs_request!(signal)
       else
         @logger.call("[obs-bridge/supervisor] ignoring unknown signal #{signal.inspect}")
       end
@@ -118,6 +141,12 @@ module ObsBridge
       with_running_runtime("inventory refresh") do |runtime|
         @logger.call("[obs-bridge/supervisor] refreshing inventory")
         runtime.refresh_inventory!
+      end
+    end
+
+    def enqueue_obs_request!(request)
+      with_running_runtime("obs request enqueue") do |runtime|
+        runtime.enqueue_obs_request!(request)
       end
     end
 
