@@ -43,7 +43,7 @@ class ObsBridgeWorker
   end
 
   def build_affordance_context
-    Struct.new(:inventory, :config, :emit_request, keyword_init: true).new(
+    ObsBridge::AffordanceContext.new(
       inventory: inventory_reader,
       config: affordance_config_reader,
       emit_request: obs_request_emitter

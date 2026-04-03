@@ -60,22 +60,37 @@ RSpec.describe ObsBridge::Runtime do
     end
   end
 
+  let(:heartbeat_interval) { 10.0 }
+  let(:idle_sleep) { 0.05 }
+
+  let(:affordance_host) { instance_double(ObsBridge::AffordanceHost) }
+
+  let(:inventory_reader) { instance_double(ObsBridge::InventoryReader) }
+  let(:affordance_config_reader) { instance_double(ObsBridge::AffordanceConfigReader) }
+  let(:obs_request_emitter) { instance_double(Proc) }
+
+  let(:affordance_context) do
+    instance_double(
+      ObsBridge::AffordanceContext,
+      inventory: inventory_reader,
+      config: affordance_config_reader,
+      emit_request: obs_request_emitter
+    )
+  end
+
   subject(:runtime) do
     described_class.new(
       state: state,
       inventory_store: inventory_store,
       session_runner: session_runner,
+      affordance_host: affordance_host,
       logger: logger,
       backoff: backoff,
       heartbeat_interval: heartbeat_interval,
       idle_sleep: idle_sleep,
-      monotonic_clock: monotonic_clock,
-      sleeper: sleeper
+      affordance_context: affordance_context
     )
   end
-
-  let(:heartbeat_interval) { 10.0 }
-  let(:idle_sleep) { 0.05 }
 
   def wait_until(timeout: 1.5)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
@@ -214,18 +229,6 @@ RSpec.describe ObsBridge::Runtime do
       mono_state.value += seconds
       sleep(seconds / 50.0)
     end
-
-    runtime = described_class.new(
-      state: state,
-      inventory_store: inventory_store,
-      session_runner: session_runner,
-      logger: logger,
-      backoff: backoff,
-      heartbeat_interval: heartbeat_interval,
-      idle_sleep: idle_sleep,
-      monotonic_clock: monotonic_clock,
-      sleeper: custom_sleeper
-    )
 
     allow(session_runner).to receive(:run).and_yield(session_without_pump)
 

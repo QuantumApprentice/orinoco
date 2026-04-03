@@ -27,13 +27,20 @@ RSpec.describe ObsBridge::Supervisor do
 
   let(:signal_queue) { Queue.new }
 
+  let(:command_consumer) { instance_double(ObsBridge::CommandConsumer, run: nil) }
+  let(:runtime) { instance_double(ObsBridge::Runtime, refresh_inventory!: nil) }
+
+  let(:runtime_factory) do
+    -> { runtime }
+  end
+
   subject(:supervisor) do
     described_class.new(
       state: state,
       control_consumer: control_consumer,
-      runtime: runtime,
-      signal_queue: signal_queue,
-      idle_sleep: 0.01
+      command_consumer: command_consumer,
+      runtime_factory: runtime_factory,
+      signal_queue: signal_queue
     )
   end
 
