@@ -13,7 +13,8 @@ module ObsBridge
       heartbeat_interval: 5.0,
       idle_sleep: 0.1,
       monotonic_clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) },
-      sleeper: ->(seconds) { sleep seconds }
+      sleeper: ->(seconds) { sleep seconds },
+      thread_factory: ->(&block) { Thread.new(&block) }
     )
       @state = state
       @inventory_store = inventory_store
@@ -26,6 +27,7 @@ module ObsBridge
       @idle_sleep = idle_sleep
       @monotonic_clock = monotonic_clock
       @sleeper = sleeper
+      @thread_factory = thread_factory
 
       @mutex = Mutex.new
       @running = false
@@ -40,7 +42,7 @@ module ObsBridge
 
         @running = true
         @stop_requested = false
-        @thread = Thread.new { run_loop }
+        @thread = @thread_factory.call { run_loop }
       end
     end
 
@@ -90,7 +92,7 @@ module ObsBridge
     def run_session
       @logger.call("[obs-bridge/runtime] connecting to OBS")
 
-      @session_runner.run(event_types: @affordance_host.event_types) do |session|
+      @session_runner.run do |session|
         @backoff.reset!
         @state.connected!
         @state.heartbeat!
@@ -106,16 +108,24 @@ module ObsBridge
       next_heartbeat_at = monotonic_now + @heartbeat_interval
 
       until stop_requested?
-        return if stop_command_received?(session)
+        command_result, next_heartbeat_at = run_connected_iteration(
+          session,
+          next_heartbeat_at
+        )
 
-        dispatch_events(session)
-        next_heartbeat_at = heartbeat_if_due(monotonic_now, next_heartbeat_at)
-        idle_with_session(session)
+        return if command_result == :stop
       end
     end
 
-    def stop_command_received?(session)
-      drain_commands(session) == :stop
+    def run_connected_iteration(session, next_heartbeat_at)
+      command_result = drain_commands(session)
+      return [:stop, next_heartbeat_at] if command_result == :stop
+
+      dispatch_events(session)
+      next_heartbeat_at = heartbeat_if_due(monotonic_now, next_heartbeat_at)
+      idle_with_session(session)
+
+      [:continue, next_heartbeat_at]
     end
 
     def drain_commands(session)

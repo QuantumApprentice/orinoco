@@ -16,14 +16,22 @@ run_rails() {
 run_rspec() {
   bundle exec ruby -e "
     require 'dotenv'
-    Dotenv.load('.env.dev.orinoco')
+    Dotenv.load('.env.test.orinoco')
     exec Gem.ruby, Gem.bin_path('rspec-core', 'rspec'), *ARGV
   " -- "$@"
 }
 
+run_test_migrate() {
+  bundle exec ruby -e "
+    require 'dotenv'
+    Dotenv.load('.env.test.orinoco')
+    exec Gem.ruby, './bin/rails', 'db:migrate', *ARGV
+  " -- "$@"
+}
+
 case "$CMD" in
-  "" | help | -h | --help)
-    cat <<EOF
+"" | help | -h | --help)
+  cat <<EOF
 Usage: $0 <rails-command-or-shortcut> [args...]
 
 Shortcuts:
@@ -47,32 +55,35 @@ Examples:
   $0 runner "puts Rails.env"
   $0 destroy model EnabledAffordance
 EOF
-    ;;
-  migrate)
-    run_rails db:migrate "$@"
-    ;;
-  routes | r)
-    run_rails routes "$@"
-    ;;
-  spec | sp)
-    run_rspec "$@"
-    ;;
-  bridge | obs)
-    run_rails runner "ObsBridgeWorker.new.run" "$@"
-    ;;
-  tailwind | tw)
-    run_rails tailwindcss:build "$@"
-    ;;
-  server | s)
-    run_rails server -p 33230 -b 0.0.0.0 -P tmp/pids/server.foreman.development.pid "$@"
-    ;;
-  generate | g)
-    run_rails generate "$@"
-    ;;
-  console | c)
-    run_rails console "$@"
-    ;;
-  *)
-    run_rails "$CMD" "$@"
-    ;;
+  ;;
+tmigrate)
+  run_test_migrate "$@"
+  ;;
+migrate)
+  run_rails db:migrate "$@"
+  ;;
+routes | r)
+  run_rails routes "$@"
+  ;;
+spec | sp)
+  run_rspec "$@"
+  ;;
+bridge | obs)
+  run_rails runner "ObsBridgeWorker.new.run" "$@"
+  ;;
+tailwind | tw)
+  run_rails tailwindcss:build "$@"
+  ;;
+server | s)
+  run_rails server -p 33230 -b 0.0.0.0 -P tmp/pids/server.foreman.development.pid "$@"
+  ;;
+generate | g)
+  run_rails generate "$@"
+  ;;
+console | c)
+  run_rails console "$@"
+  ;;
+*)
+  run_rails "$CMD" "$@"
+  ;;
 esac
