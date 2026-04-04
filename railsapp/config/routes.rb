@@ -1,8 +1,8 @@
 Rails.application.routes.draw do
   get  "basic_setup/index"
-  get  "clip_show/index"
   post "clip_show/play"
   get  "clip_show/get_scenes"
+  get "clip_show" => "clip_show#get_scenes", as: :clip_show
 
   resource :obs_config, only: [:show, :edit, :update, :create]
 
@@ -12,6 +12,9 @@ Rails.application.routes.draw do
       post :stop, on: :member
       post :refresh, on: :member
       post :capture_all, on: :member
+    end
+    namespace :admin do
+      get "obs_bridge/debug", to: "obs_bridge_debug#index"
     end
   end
 

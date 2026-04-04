@@ -19,6 +19,16 @@ class SceneIndex
     @logger.call("[requests] refreshed scene index for #{@scene} (#{fresh.size})")
   end
 
+  def load_from_inventory!(inventory_reader)
+    fresh = {}
+    inventory_reader.scene_items(@scene).each do |clip|
+      fresh[clip.fetch("sourceName")] = clip.fetch("sceneItemId")
+    end
+
+    @mtx.synchronize { @by_name = fresh }
+    @logger.call("[inventory] loaded scene index for #{@scene} (#{fresh.size})")
+  end
+
   def id_for(name)
     @mtx.synchronize { @by_name[name] }
   end

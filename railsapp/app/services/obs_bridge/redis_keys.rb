@@ -26,6 +26,10 @@ module ObsBridge
       "#{prefix}:scene:#{escape_segment(scene_name)}:items"
     end
 
+    def input_placements_by_uuid
+      "#{prefix}:input_placements_by_uuid"
+    end
+
     private
 
     def escape_segment(value)

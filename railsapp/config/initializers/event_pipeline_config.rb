@@ -20,16 +20,20 @@ Rails.application.config.to_prepare do
     sns_client = Aws::SNS::Client.new(**opts)
     sqs_client = Aws::SQS::Client.new(**opts)
 
-    Rails.application.config.x.orinoco.messaging_topology =
-      Orinoco::Messaging::Topology.define(
-        sns_client: sns_client,
-        sqs_client: sqs_client
-      ) do
-        topic Orinoco::Messaging::Names::BRIDGE_CONTROL_TOPIC do
-          queue Orinoco::Messaging::Names::OBS_BRIDGE_CONTROL_QUEUE,
-            visibility_timeout: 30,
-            receive_message_wait_time_seconds: 20
-        end
-      end.ensure!
-  end
+  Rails.application.config.x.orinoco.messaging_topology =
+    Orinoco::Messaging::Topology.define(
+      sns_client: sns_client,
+      sqs_client: sqs_client
+    ) do
+      topic Orinoco::Messaging::Names::BRIDGE_CONTROL_TOPIC do
+        queue Orinoco::Messaging::Names::OBS_BRIDGE_CONTROL_QUEUE,
+          visibility_timeout: 30,
+          receive_message_wait_time_seconds: 20
+      end
+      topic Orinoco::Messaging::Names::OBS_COMMAND_TOPIC do
+        queue Orinoco::Messaging::Names::OBS_BRIDGE_COMMAND_QUEUE,
+          visibility_timeout: 30,
+          receive_message_wait_time_seconds: 20
+      end
+    end.ensure!
 end
