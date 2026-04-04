@@ -1,4 +1,6 @@
 # config/initializers/obs_bridge_config.rb
+return if ENV["SECRET_KEY_BASE_DUMMY"] == "1" || Rails.env.test?
+
 Rails.application.config.x.scoreboard.redis_url =
   ENV.fetch("SCOREBOARD_REDIS_URL")
 
