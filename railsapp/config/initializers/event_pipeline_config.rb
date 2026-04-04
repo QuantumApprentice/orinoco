@@ -3,10 +3,10 @@
 return if ENV["SECRET_KEY_BASE_DUMMY"] == "1" || Rails.env.test?
 
 Rails.application.config.x.scoreboard.redis_url =
-  ENV.fetch("SCOREBOARD_REDIS_URL")
+  ENV.fetch("SCOREBOARD_REDIS_URL", "unset_scoreboard_redis_url")
 
 Rails.application.config.x.event_pipeline.aws_client_options = {
-  endpoint: ENV.fetch("EVENT_PIPELINE_GOAWS_URL"),
+  endpoint: ENV.fetch("EVENT_PIPELINE_GOAWS_URL", "unset_event_pipeline_goaws_url"),
   region: ENV.fetch("AWS_REGION", "us-east-1"),
   access_key_id: ENV.fetch("AWS_ACCESS_KEY_ID", "fake"),
   secret_access_key: ENV.fetch("AWS_SECRET_ACCESS_KEY", "fake")
@@ -16,8 +16,9 @@ require Rails.root.join("app/services/orinoco/messaging/topology")
 
 Rails.application.config.to_prepare do
   opts = Rails.configuration.x.event_pipeline.aws_client_options
-  sns_client = Aws::SNS::Client.new(**opts)
-  sqs_client = Aws::SQS::Client.new(**opts)
+  if (not opts[:endpoint].include?("unset_event_pipeline_goaws_url"))
+    sns_client = Aws::SNS::Client.new(**opts)
+    sqs_client = Aws::SQS::Client.new(**opts)
 
   Rails.application.config.x.orinoco.messaging_topology =
     Orinoco::Messaging::Topology.define(
