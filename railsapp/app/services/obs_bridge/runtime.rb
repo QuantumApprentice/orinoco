@@ -92,7 +92,7 @@ module ObsBridge
     def run_session
       @logger.call("[obs-bridge/runtime] connecting to OBS")
 
-      @session_runner.run do |session|
+      @session_runner.run(event_types: @affordance_host.event_types) do |session|
         @backoff.reset!
         @state.connected!
         @state.heartbeat!
