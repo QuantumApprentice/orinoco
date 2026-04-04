@@ -5,28 +5,41 @@ set -euo pipefail
 CMD="${1:-}"
 shift || true
 
+run_with_env() {
+  local dotenv_file="$1"
+  shift
+
+  bundle exec ruby -e '
+    require "dotenv"
+    Dotenv.load(ARGV.shift)
+
+    ruby_bin =
+      ENV["ORINOCO_RUBY_BIN"] ||
+      begin
+        windows_ruby = "c:\\Ruby40-x64\\bin\\ruby.exe"
+        if Gem.win_platform? && File.exist?(windows_ruby)
+          windows_ruby
+        else
+          Gem.ruby
+        end
+      end
+
+    exec ruby_bin, *ARGV
+  ' -- "$dotenv_file" "$@"
+}
+
 run_rails() {
-  bundle exec ruby -e "
-    require 'dotenv'
-    Dotenv.load('.env.dev.orinoco')
-    exec 'c:\\Ruby40-x64\\bin\\ruby.exe', './bin/rails', *ARGV
-  " -- "$@"
+  run_with_env ".env.dev.orinoco" "./bin/rails" "$@"
 }
 
 run_rspec() {
-  bundle exec ruby -e "
-    require 'dotenv'
-    Dotenv.load('.env.test.orinoco')
-    exec Gem.ruby, Gem.bin_path('rspec-core', 'rspec'), *ARGV
-  " -- "$@"
+  run_with_env ".env.test.orinoco" \
+    Gem.bin_path("rspec-core", "rspec") \
+    "$@"
 }
 
 run_test_migrate() {
-  bundle exec ruby -e "
-    require 'dotenv'
-    Dotenv.load('.env.test.orinoco')
-    exec Gem.ruby, './bin/rails', 'db:migrate', *ARGV
-  " -- "$@"
+  run_with_env ".env.test.orinoco" "./bin/rails" db:migrate "$@"
 }
 
 case "$CMD" in
@@ -36,6 +49,7 @@ Usage: $0 <rails-command-or-shortcut> [args...]
 
 Shortcuts:
   migrate
+  tmigrate
   routes | r
   spec | sp
   bridge | obs
@@ -46,6 +60,7 @@ Shortcuts:
 
 Examples:
   $0 migrate
+  $0 tmigrate
   $0 routes
   $0 g model EnabledAffordance name:string config:jsonb scene_name:string
   $0 spec
