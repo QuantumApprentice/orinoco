@@ -23,6 +23,8 @@ module ObsBridge
     def run(stop:)
       until stop.call
         receive_messages.each do |message|
+          @logger.call("[obs-bridge/command-consumer] message: #{message.class}: #{message.body}")
+
           request = decode_message_body(message.body)
           @signal_queue << request
           delete_message(message)

@@ -2,6 +2,8 @@
 
 ClipShowAffordance = Affordance.new(:clip_show) do |a|
   a.on :media_input_playback_ended do |event, ctx|
+    ctx.logger.call("[affordances/clip_show] on_event #{event.fetch("inputUuid")} in scene #{placement.fetch("sceneName")}, hiding")
+
     ctx.inventory
       .placements_for_input_uuid(event.fetch("inputUuid"))
       .select do |placement|
@@ -11,6 +13,7 @@ ClipShowAffordance = Affordance.new(:clip_show) do |a|
         )
       end
       .each do |placement|
+        ctx.logger.call("[affordances/clip_show] media_input_playback_ended: input #{event.fetch("inputUuid")} in scene #{placement.fetch("sceneName")}, hiding")
         ctx.emit_request.call(
           "requestType" => "SetSceneItemEnabled",
           "requestData" => {

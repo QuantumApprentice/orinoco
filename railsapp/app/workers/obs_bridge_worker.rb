@@ -23,6 +23,7 @@ class ObsBridgeWorker
     host = ObsBridge::AffordanceHost.new
 
     affordances.each do |affordance|
+      puts "[obs_bridge_worker] Installing affordance #{affordance.name}"
       affordance.install_into(host)
     end
 
