@@ -11,7 +11,10 @@ run_with_env() {
 
   bundle exec ruby -e '
     require "dotenv"
-    Dotenv.load(ARGV.shift)
+    require "rubygems"
+
+    dotenv_file = ARGV.shift
+    Dotenv.load(dotenv_file)
 
     ruby_bin =
       ENV["ORINOCO_RUBY_BIN"] ||
@@ -33,9 +36,9 @@ run_rails() {
 }
 
 run_rspec() {
-  run_with_env ".env.test.orinoco" \
-    Gem.bin_path("rspec-core", "rspec") \
-    "$@"
+  local rspec_bin
+  rspec_bin="$(bundle exec ruby -e 'require "rubygems"; puts Gem.bin_path("rspec-core", "rspec")')"
+  run_with_env ".env.test.orinoco" "$rspec_bin" "$@"
 }
 
 run_test_migrate() {
