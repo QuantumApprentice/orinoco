@@ -17,9 +17,9 @@ RSpec.describe "ClipShows", type: :request do
     allow(SceneIndex).to receive(:new).and_return(scene_index)
   end
 
-  describe "GET /index" do
+  describe "GET /get_scenes" do
     it "returns http success" do
-      get clip_show_index_path
+      get clip_show_get_scenes_path
 
       expect(response).to have_http_status(:success)
       expect(SceneIndex).to have_received(:new).with(scene: "Clips")

@@ -1,56 +1,91 @@
+# frozen_string_literal: true
+
+require "json"
+
 class ClipShowController < ApplicationController
-  def index
-    @scenes=Hash.new
-    @clips=SceneIndex.new(scene:"Clips")
-    OBSWS::Requests::Client.new(host: @host, port: @port).run do |req|
-      @clips.refresh!(req)
-    end
-  end
+  # def index
+  #  @scenes = Hash.new
+  #  @clips = SceneIndex.new(scene: "Clips")
+  #  @clips.load_from_inventory!(inventory_reader)
+  # end
 
   def play
     index_to_play = params[:id]
     clip_name     = params[:clip_name]
     scene_name    = params[:scene_name]
 
-    OBSWS::Requests::Client.new(host: @host, port: @port).run do |req|
+    obs_request_emitter.call(
+      "requestType" => "SetSceneItemEnabled",
+      "requestData" => {
+        "sceneName" => scene_name,
+        "sceneItemId" => index_to_play.to_i,
+        "sceneItemEnabled" => true
+      }
+    )
 
-      req.set_scene_item_enabled(scene_name, index_to_play.to_i, true)
-      req.set_input_audio_monitor_type(clip_name, 'OBS_MONITORING_TYPE_MONITOR_ONLY')
+    obs_request_emitter.call(
+      "requestType" => "SetInputAudioMonitorType",
+      "requestData" => {
+        "inputName" => clip_name,
+        "monitorType" => "OBS_MONITORING_TYPE_MONITOR_ONLY"
+      }
+    )
 
+    respond_to do |format|
+        format.turbo_stream { render turbo_stream: [] }
+        format.html { redirect_to clip_show_path }
     end
-
   end
 
-  # make a Hash that has scene name as key
-  # and the clips as an Array for the value
   def get_scenes
     @scenes = Hash.new
-    @scene_name = params[:scenes];
+    @scene_name = params[:scenes]
+    @scene_names = inventory_reader.scenes.map { |s| s.fetch("sceneName") }
 
+    @clips = []
 
-    OBSWS::Requests::Client.new(host: @host, port: @port).run do |client|
-      @scene_names = client.get_scene_list.scenes.map { |s|
-        s[:sceneName]
-      }
-
-      @clips = []
-
-      if (@scene_name)
-        clip_cache = SceneIndex.new(scene: @scene_name)
-        clip_cache.refresh!(client)
-        @clips = clip_cache.by_name
-      end
-
-
-
-
-
-    #   client.get_scene_list.scenes.each do |scene|
-    #     clip_cache = SceneIndex.new(scene: scene[:sceneName])
-    #     clip_cache.refresh!(client)
-    #     @scenes[scene[:sceneName]] = clip_cache.by_name
-    #   end
+    if @scene_name.present?
+      clip_cache = SceneIndex.new(scene: @scene_name)
+      clip_cache.load_from_inventory!(inventory_reader)
+      @clips = clip_cache.by_name
     end
   end
 
+  private
+
+  def inventory_reader
+    @inventory_reader ||= ObsBridge::InventoryReader.new(
+      redis: redis,
+      bridge_id: bridge_id
+    )
+  end
+
+  def obs_request_emitter
+    @obs_request_emitter ||= lambda do |request|
+      sns.publish(
+        topic_arn: topology.topic_arn(Orinoco::Messaging::Names::OBS_COMMAND_TOPIC),
+        message: JSON.generate(request)
+      )
+    end
+  end
+
+  def sns
+    @sns ||= Aws::SNS::Client.new(**app_config.event_pipeline.aws_client_options)
+  end
+
+  def redis
+    @redis ||= Redis.new(url: app_config.scoreboard.redis_url)
+  end
+
+  def topology
+    app_config.orinoco.messaging_topology
+  end
+
+  def bridge_id
+    app_config.obs_bridge.bridge_id
+  end
+
+  def app_config
+    Rails.configuration.x
+  end
 end

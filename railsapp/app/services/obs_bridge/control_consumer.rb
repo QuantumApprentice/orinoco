@@ -45,6 +45,8 @@ module ObsBridge
     end
 
     def process_message(message)
+      @logger.call("[obs-bridge/control] message: #{message.class}: #{message.body}")
+
       payload = @message_unwrapper.unwrap(message)
       control_message = @message_parser.parse(payload, expected_bridge_id: @bridge_id)
       result = @applier.apply(control_message)
