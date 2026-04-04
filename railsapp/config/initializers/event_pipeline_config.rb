@@ -36,4 +36,5 @@ Rails.application.config.to_prepare do
           receive_message_wait_time_seconds: 20
       end
     end.ensure!
+  end
 end
