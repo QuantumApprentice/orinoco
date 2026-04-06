@@ -1,36 +1,236 @@
 # orinoco
-Streamer Tech
 
+Streamer tech that doesn't make you hate your life.
 
-[twitch API](https://dev.twitch.tv/docs/api/)
-[obsws ruby gem](https://rubygems.org/gems/obsws)
+---
 
+## What this is
 
-[ruby obs websocket library](https://github.com/hanazuki/ruby-obs-websocket)
+Right now, most streamer setups look like this:
 
-Where we are: hacky scripts and direct-manipulating OBS in the web server
+* random scripts
+* direct API calls
+* copy-pasted glue
+* "why did that fire twice" energy
 
-Where we're going:
+Orinoco is an attempt to replace that with something that actually has a shape.
 
-a full Docker Compose setup with a ruby on rails frontend / backend, using postgres and goaws to build a dynamic stream manipulation platform.
+At the core: **everything is events**.
 
-Each integration bridge should have their own script running in the docker container, that subscribes to the service and the event queue and forwards events between them.
+Stuff happens → events get emitted → something reacts → more events happen.
 
-We should only subscribe to the events that correspond to features we are configured to use.
+No spooky action. No hidden wires.
 
-The plan is that the streamer installs this project via docker compose, then opens up a web page and configures it.  It should create the needed OBS scenes and setup dynamically as features are configured.
+---
 
-Wizards to build configuration, but being able to edit the pipelines after they've been configured is key, which means we're going to need some 'intent' metadata to make things make sense.
+## Where we are
 
-A Key Inspiration for this project, aside from needing it on Linux and Mac OS X in addition to windows, was that Hotwire allows db-backed data changes to push update a browser source.   This means we can have have one interface exposed to the streamer, and also have another interface that is rendered as an OBS browser source but pointed at our rails app to generate panels for scenes in OBS.
+* OBS bridge exists (works, but… yeah)
+* event pipeline exists (SNS/SQS via GoAWS)
+* ClipShow works (trigger clips, disable on finish)
+* a lot of things are still duct-taped together
 
-We should be able to make a 'chat event generifier' event pipeline such that we can define one set of triggers and it will work for discord and twitch, and provide responses to both as appropriate
+Also:
 
+> the OBS bridge is like a million files and I regret my life choices
 
-Initial Target Functionalities:
-Clip Triggers (enable a input source to 'play' it, with disable-on-finish event response)
-metadata tracking of who triggered what how many times when
-be able to setup chained plays - clip a, clip b, clip c
-be able to random select a clip
-be able to sequence the random clip select (i.e. always play these 2, then play 1 out of the 4 choices)
-custom ruleset word games
+---
+
+## Where we're going
+
+A local-first system you run with docker-compose:
+
+* Rails app (UI + config + projections)
+* Postgres (real data)
+* Redis (fast stuff / derived state)
+* GoAWS (SNS/SQS event pipeline)
+* bridges for external systems (OBS, Twitch, Discord, etc)
+
+You run:
+
+```
+docker compose up
+```
+
+Open a browser.
+Configure stuff.
+
+The system builds itself around what you enable.
+
+---
+
+## The Shape (important)
+
+This is the part that actually matters.
+
+### Event Pipeline
+
+SNS topics + SQS queues.
+
+Everything moves through here.
+
+If it's not in the pipeline, it doesn't exist.
+
+---
+
+### Bridges
+
+Bridges talk to the outside world.
+
+Examples:
+
+* OBS bridge
+* Twitch bridge
+* (eventually) Discord bridge
+
+They:
+
+* receive external events → publish into pipeline
+* consume pipeline events → call external APIs
+
+They do **not** decide behavior.
+
+They are translators, not brains.
+
+---
+
+### Affordances
+
+This is where behavior lives.
+
+Affordances:
+
+* listen to events
+* run logic
+* emit new events
+
+They do not:
+
+* call OBS directly
+* talk to Twitch directly
+
+Example: ClipShow
+
+* sees "media finished playing"
+* emits "disable that source"
+
+That's it.
+
+---
+
+### Projections (Redis)
+
+Redis holds "what we know right now".
+
+Examples:
+
+* last N chat messages
+* OBS inventory
+* recent events (for debugging)
+
+Built from events.
+
+UI reads from here.
+
+---
+
+### UI / Overlays (Hotwire)
+
+Rails does two jobs:
+
+1. control UI
+2. OBS browser source rendering
+
+Hotwire means:
+
+* change data → UI updates automatically
+
+So the same system:
+
+* configures your stream
+* renders your overlays
+
+No separate frontend nonsense.
+
+---
+
+## Design Rules (these will get broken if not written down)
+
+* events over direct calls
+* bridges translate, affordances decide
+* UI reads projections, not raw events
+* no hidden side effects
+* if you can't observe it, it didn't happen
+
+---
+
+## Example flow (clip playback)
+
+1. UI emits: "play clip"
+2. pipeline routes it
+3. OBS bridge enables scene item
+4. OBS emits "playback ended"
+5. ClipShow affordance sees it
+6. emits "disable scene item"
+7. OBS bridge applies it
+
+Nothing talks to anything directly.
+
+---
+
+## Initial goals
+
+* trigger clips
+* disable clips on finish
+* track who triggered what
+* chained playback (A → B → C)
+* random clip selection
+* weighted / ordered randomness
+* dumb/fun chat-driven games
+
+---
+
+## Things we know we need
+
+* SQS bridge as the "clean" reference implementation
+* refactor OBS bridge to match it
+* event capture (store recent events in Redis for debugging)
+* event type registry per domain (obs, twitch, etc)
+* pipeline visualization (mermaid)
+* UI for configuring affordances (ClipShow, etc)
+
+---
+
+## Longer term
+
+* unified chat model (twitch + discord)
+* pipeline editing UI
+* overlay builder
+* "chat event generifier" so one trigger works everywhere
+
+---
+
+## Why this is interesting
+
+Because once this works, you stop writing scripts and start composing behavior.
+
+Instead of:
+
+> "when twitch says X, call OBS"
+
+You get:
+
+> "when event X happens, do Y"
+
+And X can come from anywhere.
+
+---
+
+## Status
+
+Active build.
+
+Some parts are clean.
+Some parts are cursed.
+
+We're fixing it in public.
