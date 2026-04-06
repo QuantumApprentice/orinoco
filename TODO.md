@@ -61,11 +61,6 @@ right now we can bring the one bridge we have up or down, but we need The Big Sw
 
 # Done
 
-## Integrate SNS / SQS via GoAWS (create the Event Pipeline)
-The server is running, the OBS bridge is controllable (bridge up/down) and commandable (OBS commands).
-
-[config/initializers/event_pipeline_config.rb](https://github.com/meleneth/orinoco/blob/158aebcbffdcd3546675be23ffa3dc0c62c76c9f/railsapp/config/initializers/event_pipeline_config.rb#L23)
-
 ## Create the OBS bridge
 A long-running bridge process connects to OBS via obs-websocket and handles event-driven control of scenes and inputs. The event pipeline version is now functional, with a control queue to manage bridge lifecycle (start/stop) and a command queue for passing commands through to OBS.
 
@@ -92,7 +87,10 @@ There is currently no configuration UI. Running the following script seeds ClipS
 
     ./r_dev runner script/dev/seed_clipshow.rb
 
-## Let it be Known that the event pipeline is currently SNS/SQS, locally hosted via a goaws container
+## Integrate SNS / SQS via GoAWS (create the Event Pipeline)
+The server is running, the OBS bridge is controllable (bridge up/down) and commandable (OBS commands).
+
+[config/initializers/event_pipeline_config.rb](https://github.com/meleneth/orinoco/blob/158aebcbffdcd3546675be23ffa3dc0c62c76c9f/railsapp/config/initializers/event_pipeline_config.rb#L23)
 
 ## get rails site running via docker and foreman for all devs
 The development environment is split between Docker-managed services and local process orchestration.
