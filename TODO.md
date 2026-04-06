@@ -102,8 +102,8 @@ The development environment is split between Docker-managed services and local p
     ./railsapp/bin/dev
 
 
-## compose.yml to configure docker compose to run rails, goaws, opentelemetry, postgres
-A unified Docker Compose setup defines the full local development stack, including Rails, GoAWS, OpenTelemetry, and Postgres. This provides a reproducible environment for all developers and mirrors the production topology at a smaller scale.
+## compose.yml to configure docker compose to run rails, goaws, postgres
+A unified Docker Compose setup defines the full local development stack, including Rails, GoAWS, and Postgres. This provides a reproducible environment for all developers and mirrors the production topology at a smaller scale.
 
 
 ## install rbenv and ruby - instructions in devsetup.md
