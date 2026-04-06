@@ -1,7 +1,9 @@
 # Now
 
-## SQS Bridge
+## SQS Bridge (Mel)
 The OBS bridge sucks, it's like a million files.  Figure out what the right shape is supposed to be, and make sure you update the OBS bridge to use it as well
+
+The SQS bridge is where 'pure event affordances' should live.  Stuff that just listens to a queue, does logic to it, then writes 0 or more events to another topic or queue
 
 ## Twitch Chat Bridge (QA)
 
@@ -11,10 +13,12 @@ Consume Twitch Bridge Control events to turn the bridge on / off
 
 Consume Twitch Chat events from the Event Pipeline to populate Redis with last N chat messages
 
-Probably also keep a list of seen nicknames?
+[redis API docs](https://redis.io/docs/latest/commands/redis-8-6-commands/)
 
     redis.lpush("recent_twitch_chat", payload)
     redis.ltrim("recent_twitch_chat", 0, 5)
+
+Probably also keep a list of seen nicknames?
 
 ## Twitch Chat Renderer (QA)
 Make a Hotwire-enabled screen to render chat as a web page with the thought to make a web source out of it later
@@ -29,6 +33,20 @@ These will be important from the obs-bridge for the hotwire technique
 
 # Soon
 
+## Make Event Capturing Work
+The bridge has something for 'capture the next 15 minutes', but it doesn't work.  We need to store events in redis for debugging purposes when it is enabled
+
+## Use mermaid.js to make a diagram of the event pipeline
+As the event pipeline gets more complicated and especially has user-generated entries, being able to see the shape of the configured pipelines will be important.
+
+## Web UI to configure the ClipShow affordance
+right now we're just using [script/dev/seed_clipshow.rb](https://github.com/meleneth/orinoco/blob/158aebcbffdcd3546675be23ffa3dc0c62c76c9f/railsapp/script/dev/seed_clipshow.rb) to configure ClipShow manually to be active against the 'Clips' scene.  We need a web UI, that should list the scenes and have checkboxes for which scenes should have ClipShow enabled.
+
+Having ClipShow enabled means that when the system sees an event for media playback completed, it will disable the media source.
+
+## Make ClipShow disable the media source before enabling it to play
+if something goes wrong and a media source is left enabled, it will not play when we try so disable it first, then enable it to play
+
 ## Make a Discord Bridge
 This might be difficult due to the need to securely store and access a secret
 
@@ -37,12 +55,26 @@ This might be difficult due to the need to securely store and access a secret
 ## follow the Hotwire example to get an Overlay going
 we use Hotwire currently for the OBS bridge control status panel
 
+the overlay should be user-configured, but able to show dynamic information.
+
+It's ok to start simple here.  'the overlay' being a page with a transparent background and a single div with some text on it will go a long, long way.  Or maybe the first one is the chat from twitch, who knows.
+
+the point is to use this as a browser source in the OBS config itself.  Bonus points if we can add and configure the source without making the user do it.
+
+## enumerate (and save in the database?) the known event types for the various bridges
 we will want to maintain a master list of events per-domain (i.e. obs, twitch, etc) so we can subscribe to them and also because we only want to let known event types pass
 
-integrate the long-running processes that will be talking to twitch
-
-
 # Later
+
+## Fix 'which OBS to connect to' story
+the config we are storing in the database is not being used to connect to OBS.
+It should be.  It should also work transparently when in a docker container, which requires talking to 
+docker.host.local instead of localhost? or something like that
+
+## Fix railsapp dev container
+We should probaly just remove it from the docker compose until this is done.
+
+That said, if we bind mount the railsapp into the container we might actually be able to run dev via the container, which would be a big win
 
 ## come up with an event configuration UI
 What events in what domains we're subscribed to, and what events we want to send.
