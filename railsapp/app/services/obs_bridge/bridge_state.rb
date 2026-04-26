@@ -4,7 +4,7 @@ require "time"
 
 module ObsBridge
   class BridgeState
-    def initialize(redis:, bridge_id:, clock: -> { Time.now.utc }, default_enabled: false, status_writer: nil)
+    def initialize(redis:, bridge_id: "obs_bridge", clock: -> { Time.now.utc }, default_enabled: false, status_writer: nil)
       @bridge_id = bridge_id
       @keys = RedisKeys.new(bridge_id: bridge_id)
       @status_writer = status_writer || ObsBridge::StatusWriter.new(redis: redis, bridge_id: bridge_id)

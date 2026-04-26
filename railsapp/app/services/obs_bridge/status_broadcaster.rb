@@ -2,7 +2,7 @@
 
 module ObsBridge
   class StatusBroadcaster
-    def initialize(bridge_id:, redis:, status_reader: nil)
+    def initialize(bridge_id: "obs_bridge", redis:, status_reader: nil)
       @status_reader = status_reader || StatusReader.new(redis: redis, bridge_id: bridge_id)
       @bridge_id = bridge_id
     end
