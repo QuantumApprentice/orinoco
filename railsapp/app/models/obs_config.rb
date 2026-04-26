@@ -3,7 +3,7 @@ class ObsConfig < ApplicationRecord
 
   private
   def set_defaults
-    self.host ||= "localhost"
+    self.host ||= "localhost.docker.internal"
     self.port ||= 4455
   end
 

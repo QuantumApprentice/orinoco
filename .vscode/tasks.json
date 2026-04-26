@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev: rails server",
+      "type": "shell",
+      "command": "bin/rails server -b 0.0.0.0",
+      "problemMatcher": []
+    },
+    {
+      "label": "test: rspec via dc_test",
+      "type": "shell",
+      "command": "cd /workspaces/orinoco && ./dc_test run --rm railsapp bundle exec rspec",
+      "problemMatcher": []
+    }
+  ]
+}
