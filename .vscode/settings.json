@@ -1,0 +1,21 @@
+{
+  "rubyLsp.testRunner": "rspec",
+  "rubyLsp.rspecCommand": "bundle exec rspec",
+  "rubyLsp.rubyVersionManager": {
+    "identifier": "none"
+  },
+  "extensions.supportNodeGlobalNavigator": true,
+  "rubyLsp.testDiscovery": true,
+  "rubyLsp.launchDebugger": false,
+  "rubyLsp.enabledFeatures": {
+    "diagnostics": true,
+    "codeActions": true,
+    "completion": true,
+    "definition": true,
+    "hover": true,
+    "documentSymbols": true,
+    "workspaceSymbol": true,
+    "formatting": true,
+    "semanticHighlighting": true
+  }
+}
