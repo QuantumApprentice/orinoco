@@ -82,3 +82,8 @@ group :development, :test do
   gem "ruby-lsp-rails", require: false
   gem "ruby-lsp-rspec", require: false
 end
+
+group :test do
+  gem "super_diff", require: false
+  gem "simplecov", require: false
+end
