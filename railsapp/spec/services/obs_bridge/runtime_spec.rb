@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require "spec_helper"
 
 RSpec.describe ObsBridge::Runtime do
   class FakeThread
@@ -74,7 +74,7 @@ RSpec.describe ObsBridge::Runtime do
 
   let(:inventory) do
     {
-      scenes: [{ "sceneName" => "Clips" }],
+      scenes: [ { "sceneName" => "Clips" } ],
       scene_items_by_scene: {
         "Clips" => [
           { "sceneItemId" => 1, "sourceName" => "fight", "sceneItemEnabled" => true }
@@ -119,7 +119,7 @@ RSpec.describe ObsBridge::Runtime do
   let(:affordance_host) do
     instance_double(
       ObsBridge::AffordanceHost,
-      event_types: ["MediaInputPlaybackEnded"],
+      event_types: [ "MediaInputPlaybackEnded" ],
       dispatch: nil
     )
   end
@@ -166,7 +166,7 @@ RSpec.describe ObsBridge::Runtime do
 
   it "connects, heartbeats, and hydrates inventory on start" do
     allow(session_runner).to receive(:run)
-      .with(event_types: ["MediaInputPlaybackEnded"])
+      .with(event_types: [ "MediaInputPlaybackEnded" ])
       .and_yield(session)
 
     runtime.start!
@@ -193,7 +193,7 @@ RSpec.describe ObsBridge::Runtime do
 
   it "refreshes inventory on demand while running" do
     allow(session_runner).to receive(:run)
-      .with(event_types: ["MediaInputPlaybackEnded"])
+      .with(event_types: [ "MediaInputPlaybackEnded" ])
       .and_yield(session)
 
     runtime.start!
@@ -216,7 +216,7 @@ RSpec.describe ObsBridge::Runtime do
 
   it "queues obs requests while running" do
     allow(session_runner).to receive(:run)
-      .with(event_types: ["MediaInputPlaybackEnded"])
+      .with(event_types: [ "MediaInputPlaybackEnded" ])
       .and_yield(session)
 
     request = {
@@ -252,9 +252,9 @@ RSpec.describe ObsBridge::Runtime do
       "eventData" => { "inputUuid" => "abc-123" }
     }
 
-    allow(session).to receive(:poll_events).and_return([event], [])
+    allow(session).to receive(:poll_events).and_return([ event ], [])
     allow(session_runner).to receive(:run)
-      .with(event_types: ["MediaInputPlaybackEnded"])
+      .with(event_types: [ "MediaInputPlaybackEnded" ])
       .and_yield(session)
 
     runtime.start!
@@ -269,7 +269,7 @@ RSpec.describe ObsBridge::Runtime do
 
   it "heartbeats while connected" do
     allow(session_runner).to receive(:run)
-      .with(event_types: ["MediaInputPlaybackEnded"])
+      .with(event_types: [ "MediaInputPlaybackEnded" ])
       .and_yield(session)
 
     runtime.start!
@@ -296,7 +296,7 @@ RSpec.describe ObsBridge::Runtime do
     end
 
     allow(session_runner).to receive(:run)
-      .with(event_types: ["MediaInputPlaybackEnded"])
+      .with(event_types: [ "MediaInputPlaybackEnded" ])
       .and_yield(session)
 
     runtime.start!
@@ -313,7 +313,7 @@ RSpec.describe ObsBridge::Runtime do
 
   it "marks disconnected on stop" do
     allow(session_runner).to receive(:run)
-      .with(event_types: ["MediaInputPlaybackEnded"])
+      .with(event_types: [ "MediaInputPlaybackEnded" ])
       .and_yield(session)
 
     runtime.start!
@@ -329,7 +329,7 @@ RSpec.describe ObsBridge::Runtime do
 
   it "raises if started twice" do
     allow(session_runner).to receive(:run)
-      .with(event_types: ["MediaInputPlaybackEnded"])
+      .with(event_types: [ "MediaInputPlaybackEnded" ])
       .and_yield(session)
 
     runtime.start!
@@ -368,7 +368,7 @@ RSpec.describe ObsBridge::Runtime do
       .and_return(false)
 
     allow(session_runner).to receive(:run)
-      .with(event_types: ["MediaInputPlaybackEnded"])
+      .with(event_types: [ "MediaInputPlaybackEnded" ])
       .and_yield(session_without_pump)
 
     runtime.start!

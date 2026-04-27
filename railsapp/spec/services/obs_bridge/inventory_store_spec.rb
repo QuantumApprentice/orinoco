@@ -1,12 +1,9 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require "spec_helper"
 require "json"
 
 RSpec.describe ObsBridge::InventoryStore do
-
-
-
   let(:redis) { instance_double(Redis) }
   let(:pipe) { instance_double(Redis) }
   let(:clock_state) { Struct.new(:now).new(Time.utc(2026, 3, 23, 18, 0, 0)) }
@@ -110,7 +107,7 @@ RSpec.describe ObsBridge::InventoryStore do
   it "removes stale scene item keys when the inventory changes" do
     allow(redis).to receive(:get).with(keys.scenes).and_return(
       nil,
-      [{ sceneName: "Old Scene" }].to_json
+      [ { sceneName: "Old Scene" } ].to_json
     )
 
     store.write_snapshot!(
@@ -153,7 +150,7 @@ RSpec.describe ObsBridge::InventoryStore do
   end
   it "accepts simple string scene entries too" do
     store.write_snapshot!(
-      scenes: ["Clips"],
+      scenes: [ "Clips" ],
       scene_items_by_scene: {
         "Clips" => [
           { sceneItemId: 5, sourceName: "fight" }
@@ -163,7 +160,7 @@ RSpec.describe ObsBridge::InventoryStore do
 
     expect(pipe).to have_received(:set).with(
       keys.scenes,
-      ["Clips"].to_json
+      [ "Clips" ].to_json
     )
 
     expect(pipe).to have_received(:set).with(
@@ -177,7 +174,7 @@ RSpec.describe ObsBridge::InventoryStore do
   it "raises when a scene entry has no usable name" do
     expect do
       store.write_snapshot!(
-        scenes: [{ nonsense: "???" }],
+        scenes: [ { nonsense: "???" } ],
         scene_items_by_scene: {}
       )
     end.to raise_error(ArgumentError, /scene must have a name/)

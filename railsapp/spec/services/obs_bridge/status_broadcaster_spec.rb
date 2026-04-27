@@ -1,7 +1,7 @@
 # spec/services/obs_bridge/status_broadcaster_spec.rb
 # frozen_string_literal: true
 
-require "rails_helper"
+require "spec_helper"
 
 RSpec.describe ObsBridge::StatusBroadcaster do
   let(:redis) { instance_double(Redis) }
