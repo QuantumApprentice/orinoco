@@ -4,17 +4,14 @@ Rails.application.routes.draw do
   get  "clip_show/get_scenes"
   get "clip_show" => "clip_show#get_scenes", as: :clip_show
 
-  resource :obs_config, only: [:show, :edit, :update, :create]
+  resource :obs_config, only: [ :show, :edit, :update, :create ]
 
   namespace :admin do
-    resources :obs_bridges, only: [:show], param: :id do
+    resources :obs_bridges, only: [ :show ], param: :id do
       post :start, on: :member
       post :stop, on: :member
       post :refresh, on: :member
       post :capture_all, on: :member
-    end
-    namespace :admin do
-      get "obs_bridge/debug", to: "obs_bridge_debug#index"
     end
   end
 
