@@ -4,3 +4,4 @@ services:
       - ../railsapp:/rails:cached
     tmpfs:
         - /workspace/railsapp/tmp/pids
+    command: sleep infinity
