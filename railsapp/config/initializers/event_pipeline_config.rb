@@ -29,6 +29,14 @@ Rails.application.config.to_prepare do
         queue Orinoco::Messaging::Names::OBS_BRIDGE_CONTROL_QUEUE,
           visibility_timeout: 30,
           receive_message_wait_time_seconds: 20
+        queue Orinoco::Messaging::Names::TWITCH_BRIDGE_CONTROL_QUEUE,
+          visibility_timeout: 30,
+          receive_message_wait_time_seconds: 20
+      end
+      topic Orinoco::Messaging::Names::TWITCH_CHAT_MESSAGE_TOPIC do
+        queue Orinoco::Messaging::Names::TWITCH_CHAT_MESSAGE_QUEUE,
+          visibility_timeout: 30,
+          receive_message_wait_time_seconds: 20
       end
       topic Orinoco::Messaging::Names::OBS_COMMAND_TOPIC do
         queue Orinoco::Messaging::Names::OBS_BRIDGE_COMMAND_QUEUE,
