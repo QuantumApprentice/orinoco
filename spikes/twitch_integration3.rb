@@ -21,12 +21,14 @@ EM.run do
     data = e.data
     puts "Received: #{data}"
 
-    if data.start_index?("PING")
+    index = data.index(":")
+
+    if data.start_with?("PING")
 
       # outmsg = data.
-      substr = data.substring
+      substr = data[index]
 
-      ws.send("PONG :tmi.twitch.tv")
+      ws.send("PONG #{substr}")
       puts "PONG"
     end
   end

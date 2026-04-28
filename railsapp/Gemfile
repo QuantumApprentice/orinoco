@@ -67,15 +67,18 @@ gem "rspec-rails", "~> 8.0", groups: [ :development, :test ]
 
 gem "foreman", "~> 0.90.0"
 
-gem "obsws", "~> 0.6.2"
+# gem "obsws", "~> 0.6.2"
+gem "obsws", path: "vendor/gems/obsws"
 gem "aws-sdk-sqs", "~> 1.111"
 gem "aws-sdk-sns", "~> 1.112"
 
 gem "view_component", "~> 4.5"
 
 gem "redis", "~> 5.4"
+gem "twitchrb"
 
 gem "fiddle", "~> 1.1"
+gem "faye-websocket"
 
 group :development, :test do
   gem "ruby-lsp", require: false
