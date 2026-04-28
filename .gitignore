@@ -1,1 +1,3 @@
 data
+.devcontainer/*resolved.yml
+railsapp/coverage

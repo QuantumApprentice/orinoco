@@ -5,7 +5,7 @@ Rails.application.config.x.scoreboard.redis_url =
   ENV.fetch("SCOREBOARD_REDIS_URL", "unset_scoreboard_redis_url")
 
 Rails.application.config.x.obs_bridge.bridge_id =
-  ENV.fetch("OBS_BRIDGE_ID", "obs")
+  ENV.fetch("OBS_BRIDGE_ID", "obs_bridge")
 
 Rails.application.config.x.obs_bridge.default_enabled = false
 

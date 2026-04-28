@@ -136,7 +136,7 @@ class ObsBridgeWorker
   end
 
   def redis
-    @redis ||= Redis.new(url: config.scoreboard.redis_url)
+    @redis ||= Redis.new(url: Rails.application.config.x.scoreboard.redis_url)
   end
 
   def signal_queue
@@ -148,7 +148,7 @@ class ObsBridgeWorker
   end
 
   def bridge_id
-    config.obs_bridge.bridge_id
+    config.obs_bridge.bridge_id || "obs_bridge"
   end
 
   def config

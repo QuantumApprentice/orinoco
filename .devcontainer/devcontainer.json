@@ -1,0 +1,11 @@
+{
+  "name": "railsapp-dev",
+  "initializeCommand": "docker compose --env-file development.env -f development-compose.yml -f development-overrides.yml config > .devcontainer/dc_dev.resolved.yml",
+  "dockerComposeFile": [
+    "dc_dev.resolved.yml",
+    "devcontainer-overrides.yml"
+  ],
+  "service": "railsapp",
+  "workspaceFolder": "/rails",
+  "shutdownAction": "stopCompose"
+}

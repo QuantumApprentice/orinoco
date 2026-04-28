@@ -8,7 +8,7 @@ class Admin::ObsBridgesController < ApplicationController
   def start
     ObsBridge::StatusWriter.new(
       redis: redis_client,
-      bridge_id: "obs"
+      bridge_id: "obs_bridge"
     ).mark_start_requested
 
     control_publisher.start!
@@ -21,7 +21,7 @@ class Admin::ObsBridgesController < ApplicationController
   def stop
     ObsBridge::StatusWriter.new(
       redis: redis_client,
-      bridge_id: "obs"
+      bridge_id: "obs_bridge"
     ).mark_stop_requested
 
     control_publisher.stop!
@@ -48,7 +48,7 @@ class Admin::ObsBridgesController < ApplicationController
   private
 
   def bridge_id
-    return 'obs'
+    return 'obs_bridge'
     # TODO not all bridges are the obs bridge?
     # params[:id].presence || Rails.application.config.x.obs_bridge.bridge_id
   end

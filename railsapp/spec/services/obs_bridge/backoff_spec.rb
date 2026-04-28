@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require "spec_helper"
 
 RSpec.describe ObsBridge::Backoff do
   it "resets to its minimum delay" do
@@ -21,7 +21,7 @@ RSpec.describe ObsBridge::Backoff do
     backoff.reset!
     backoff.snooze!
 
-    expect(sleeps).to eq([1.0, 2.0, 1.0])
+    expect(sleeps).to eq([ 1.0, 2.0, 1.0 ])
   end
 
   it "caps at its maximum delay" do
@@ -37,6 +37,6 @@ RSpec.describe ObsBridge::Backoff do
 
     4.times { backoff.snooze! }
 
-    expect(sleeps).to eq([1.0, 2.0, 3.0, 3.0])
+    expect(sleeps).to eq([ 1.0, 2.0, 3.0, 3.0 ])
   end
 end

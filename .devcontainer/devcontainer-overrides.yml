@@ -1,0 +1,6 @@
+services:
+  railsapp:
+    volumes:
+      - ../railsapp:/rails:cached
+    tmpfs:
+        - /workspace/railsapp/tmp/pids

@@ -8,14 +8,20 @@ class ObsBridge::StatusWriter
   end
 
   def write_snapshot(attributes)
-    result = @redis.hset(@keys.status, attributes)
+    nil_fields = attributes.select { |key, value| key.nil? || value.nil? }
+
+    if nil_fields.any?
+      raise ArgumentError, "status snapshot contains nil fields: #{nil_fields.inspect}"
+    end
+
+    result = @redis.hset(@keys.status, attributes.transform_values(&:to_s))
     broadcast_status_panel!
     result
   end
 
   def set_desired_state(desired_state)
     write_snapshot(
-      "bridge_id" => @keys.bridge_id,
+      "bridge_id" => @keys.bridge_id || 'obs_bridge',
       "desired_state" => desired_state,
       "updated_at" => timestamp
     )

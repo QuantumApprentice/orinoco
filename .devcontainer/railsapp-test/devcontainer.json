@@ -1,0 +1,23 @@
+{
+  "name": "railsapp-test",
+  "initializeCommand": "docker compose --env-file test.env -f test-compose.yml -f test-overrides.yml config > .devcontainer/dc_test.resolved.yml",
+  "dockerComposeFile": [
+    "../dc_test.resolved.yml"
+  ],
+  "service": "railsapp",
+  "workspaceFolder": "/rails",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Shopify.ruby-lsp"
+      ],
+      "settings": {
+        "rubyLsp.formatter": "auto",
+        "editor.formatOnSave": true,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require "spec_helper"
+require "obs_bridge/status_reader"
 
 RSpec.describe ObsBridge::StatusReader do
   let(:redis) { instance_double(Redis) }

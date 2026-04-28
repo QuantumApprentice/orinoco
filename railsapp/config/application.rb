@@ -12,7 +12,7 @@ require "action_mailbox/engine"
 require "action_text/engine"
 require "action_view/railtie"
 require "action_cable/engine"
-# require "rails/test_unit/railtie"
+require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -23,7 +23,7 @@ module Orinoco
     config.active_record.query_log_tags_enabled = true
     config.active_record.query_log_tags = [
       # Rails query log tags:
-      :application, :controller, :action, :job,
+      :application, :controller, :action, :job
     ]
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1

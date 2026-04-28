@@ -1,45 +1,129 @@
+# frozen_string_literal: true
+
 require "rails_helper"
 
 RSpec.describe "ClipShows", type: :request do
-  let(:obs_client) { instance_double(OBSWS::Requests::Client) }
-  let(:req) do
+  let(:redis_url) { "redis://redis:6379/0" }
+  let(:bridge_id) { "obs-main" }
+  let(:redis) { instance_double(Redis) }
+
+  let(:inventory_reader) do
     instance_double(
-      "OBS request client",
-      set_scene_item_enabled: nil,
-      set_input_audio_monitor_type: nil
+      ObsBridge::InventoryReader,
+      scenes: [{ "sceneName" => "Clips" }]
     )
   end
-  let(:scene_index) { instance_double(SceneIndex, refresh!: nil, by_name: {}) }
+
+  let(:scene_index) do
+    instance_double(
+      SceneIndex,
+      load_from_inventory!: nil,
+      by_name: {}
+    )
+  end
+
+  let(:sns_client) { instance_double(Aws::SNS::Client, publish: nil) }
+  let(:aws_client_options) { { region: "us-east-1" } }
+
+  let(:topology) do
+    instance_double(
+      Orinoco::Messaging::Topology,
+      topic_arn: obs_command_topic_arn
+    )
+  end
+
+  let(:obs_command_topic_arn) do
+    "arn:aws:sns:us-east-1:000000000000:obs-command"
+  end
 
   before do
-    allow(OBSWS::Requests::Client).to receive(:new).and_return(obs_client)
-    allow(obs_client).to receive(:run).and_yield(req)
-    allow(SceneIndex).to receive(:new).and_return(scene_index)
+    allow(Rails.configuration.x.scoreboard)
+      .to receive(:redis_url)
+      .and_return(redis_url)
+
+    allow(Rails.configuration.x.obs_bridge)
+      .to receive(:bridge_id)
+      .and_return(bridge_id)
+
+    allow(Rails.configuration.x.event_pipeline)
+      .to receive(:aws_client_options)
+      .and_return(aws_client_options)
+
+    allow(Rails.configuration.x.orinoco)
+      .to receive(:messaging_topology)
+      .and_return(topology)
+
+    allow(Redis)
+      .to receive(:new)
+      .with(url: redis_url)
+      .and_return(redis)
+
+    allow(ObsBridge::InventoryReader)
+      .to receive(:new)
+      .with(redis:, bridge_id:)
+      .and_return(inventory_reader)
+
+    allow(SceneIndex)
+      .to receive(:new)
+      .and_return(scene_index)
+
+    allow(Aws::SNS::Client)
+      .to receive(:new)
+      .with(**aws_client_options)
+      .and_return(sns_client)
   end
 
   describe "GET /get_scenes" do
     it "returns http success" do
-      get clip_show_get_scenes_path
+      get clip_show_get_scenes_path, params: { scenes: "Clips" }
 
       expect(response).to have_http_status(:success)
-      expect(SceneIndex).to have_received(:new).with(scene: "Clips")
-      expect(scene_index).to have_received(:refresh!).with(req)
+
+      expect(SceneIndex)
+        .to have_received(:new)
+        .with(scene: "Clips")
+
+      expect(scene_index)
+        .to have_received(:load_from_inventory!)
+        .with(inventory_reader)
     end
   end
 
   describe "POST /play" do
-    it "returns http success" do
-      post clip_show_play_path(
-        id: 123,
-        clip_name: "fight",
-        scene_name: "Clips"
-      )
+    it "emits OBS requests" do
+      post clip_show_play_path,
+           params: {
+             id: 123,
+             clip_name: "fight",
+             scene_name: "Clips"
+           },
+           headers: {
+             "ACCEPT" => "text/vnd.turbo-stream.html"
+           }
 
       expect(response).to have_http_status(:success)
-      expect(req).to have_received(:set_scene_item_enabled).with("Clips", 123, true)
-      expect(req).to have_received(:set_input_audio_monitor_type).with(
-        "fight",
-        "OBS_MONITORING_TYPE_MONITOR_ONLY"
+
+      expect(sns_client).to have_received(:publish).with(
+        topic_arn: obs_command_topic_arn,
+        message: JSON.generate(
+          "requestType" => "SetSceneItemEnabled",
+          "requestData" => {
+            "sceneName" => "Clips",
+            "sceneItemId" => 123,
+            "sceneItemEnabled" => true
+          }
+        )
+      )
+
+      expect(sns_client).to have_received(:publish).with(
+        topic_arn: obs_command_topic_arn,
+        message: JSON.generate(
+          "requestType" => "SetInputAudioMonitorType",
+          "requestData" => {
+            "inputName" => "fight",
+            "monitorType" => "OBS_MONITORING_TYPE_MONITOR_ONLY"
+          }
+        )
       )
     end
   end

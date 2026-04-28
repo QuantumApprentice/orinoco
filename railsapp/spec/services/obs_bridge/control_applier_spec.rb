@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require "spec_helper"
 
 RSpec.describe ObsBridge::ControlApplier do
   let(:state) do
@@ -28,7 +28,7 @@ RSpec.describe ObsBridge::ControlApplier do
 
     expect(result).to eq(:enabled)
     expect(state).to have_received(:enable!).once
-    expect(signal_queue).to eq([ObsBridge::Cmd.reconcile])
+    expect(signal_queue).to eq([ ObsBridge::Cmd.reconcile ])
   end
 
   it "disables the bridge and signals reconcile" do
@@ -38,7 +38,7 @@ RSpec.describe ObsBridge::ControlApplier do
 
     expect(result).to eq(:disabled)
     expect(state).to have_received(:disable!).once
-    expect(signal_queue).to eq([ObsBridge::Cmd.reconcile])
+    expect(signal_queue).to eq([ ObsBridge::Cmd.reconcile ])
   end
 
   it "starts a capture-all window without queueing a signal" do
@@ -61,7 +61,7 @@ RSpec.describe ObsBridge::ControlApplier do
     )
 
     expect(result).to eq(:refresh)
-    expect(signal_queue).to eq([ObsBridge::Cmd.refresh_inventory])
+    expect(signal_queue).to eq([ ObsBridge::Cmd.refresh_inventory ])
   end
 
   it "ignores commands for other bridges" do

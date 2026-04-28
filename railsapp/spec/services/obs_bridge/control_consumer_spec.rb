@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require "spec_helper"
 
 RSpec.describe ObsBridge::ControlConsumer do
   let(:queue_url) { "http://goaws:31040/000000000000/obs_bridge_control" }
@@ -8,7 +8,7 @@ RSpec.describe ObsBridge::ControlConsumer do
   let(:applier) { instance_double(ObsBridge::ControlApplier) }
   let(:message_unwrapper) { class_double(ObsBridge::AwsMessage) }
   let(:message_parser) { class_double(ObsBridge::ControlMessage) }
-  let(:logger) { ->(_msg) {} }
+  let(:logger) { ->(_msg) { } }
 
   let(:message) { double("sqs message", body: '{"type":"obs.bridge.enable","bridge_id":"main"}', receipt_handle: "rh-1") }
   let(:response) { double("receive_message_response", messages: messages) }
@@ -50,7 +50,7 @@ RSpec.describe ObsBridge::ControlConsumer do
   it "applies a valid message and deletes it" do
     control_message = ObsBridge::ControlMessage::Enable.new(bridge_id: "main", command_id: "abc")
     payload = { "type" => "obs.bridge.enable", "bridge_id" => "main" }
-    messages.replace([message])
+    messages.replace([ message ])
 
     allow(message_unwrapper).to receive(:unwrap).with(message).and_return(payload)
     allow(message_parser).to receive(:parse).with(payload, expected_bridge_id: "main").and_return(control_message)
@@ -68,7 +68,7 @@ RSpec.describe ObsBridge::ControlConsumer do
   end
 
   it "drops invalid payloads and deletes the message" do
-    messages.replace([message])
+    messages.replace([ message ])
 
     allow(message_unwrapper).to receive(:unwrap).with(message)
       .and_raise(ObsBridge::AwsMessage::InvalidPayload, "bad payload")
@@ -84,7 +84,7 @@ RSpec.describe ObsBridge::ControlConsumer do
 
   it "drops invalid control messages and deletes the message" do
     payload = { "type" => "obs.bridge.spaghetti", "bridge_id" => "main" }
-    messages.replace([message])
+    messages.replace([ message ])
 
     allow(message_unwrapper).to receive(:unwrap).with(message).and_return(payload)
     allow(message_parser).to receive(:parse).with(payload, expected_bridge_id: "main")
@@ -106,7 +106,7 @@ RSpec.describe ObsBridge::ControlConsumer do
       command_id: "abc"
     )
     payload = { "type" => "obs.bridge.enable", "bridge_id" => "other" }
-    messages.replace([message])
+    messages.replace([ message ])
 
     allow(message_unwrapper).to receive(:unwrap).with(message).and_return(payload)
     allow(message_parser).to receive(:parse).with(payload, expected_bridge_id: "main").and_return(ignored_message)
@@ -124,7 +124,7 @@ RSpec.describe ObsBridge::ControlConsumer do
   it "does not delete a message when the applier raises unexpectedly" do
     control_message = ObsBridge::ControlMessage::Enable.new(bridge_id: "main", command_id: "abc")
     payload = { "type" => "obs.bridge.enable", "bridge_id" => "main" }
-    messages.replace([message])
+    messages.replace([ message ])
 
     allow(message_unwrapper).to receive(:unwrap).with(message).and_return(payload)
     allow(message_parser).to receive(:parse).with(payload, expected_bridge_id: "main").and_return(control_message)
