@@ -397,6 +397,9 @@ end
 
 
 EM.run do
+
+  puts("are we walkin here?")
+
   Tws = Faye::WebSocket::Client.new($TwitchWebSocketUrl)
 
 

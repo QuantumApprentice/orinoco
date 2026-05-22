@@ -25,3 +25,8 @@ services:
     command: ["bundle", "exec", "rails", "runner", "ObsBridgeWorker.new.run"]
     environment: *railsapp_environment
     depends_on: *railsapp_depends_on
+  twitch-chat-worker:
+    image: orinoco/railsapp
+    command: ["bundle", "exec", "rails", "runner", "app/services/twitch_chat_bridge/twitch_chat_passive.rb"]
+    environment: *railsapp_environment
+    depends_on: *railsapp_depends_on
