@@ -1,8 +1,10 @@
 Rails.application.routes.draw do
+  resources :twitch_configs
+  get  "chat/index"
   get  "basic_setup/index"
   post "clip_show/play"
   get  "clip_show/get_scenes"
-  get "clip_show" => "clip_show#get_scenes", as: :clip_show
+  get  "clip_show" => "clip_show#get_scenes", as: :clip_show
 
   resource :obs_config, only: [:show, :edit, :update, :create]
 

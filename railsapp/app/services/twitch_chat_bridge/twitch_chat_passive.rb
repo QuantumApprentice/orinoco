@@ -5,7 +5,8 @@ require 'eventmachine'
 # require 'twitchrb'
 require 'net/http'
 
-$channelName        = 'quantumapprentice'
+# $channelName        = 'quantumapprentice'
+$channelName        = TwitchConfig.first.channel_name
 $botName            = "justinfan69420"
 $TwitchWebSocketUrl = 'wss://irc-ws.chat.twitch.tv:443'
 $_7TV_WebSocketUrl  = "https://7tv.io/v3/emote-sets/global"    #users/twitch/#{channelName}"
@@ -114,6 +115,9 @@ module TwitchIRC
     :command,
     :params,
     :text,
+    :name,
+    :msg,
+
     keyword_init: true
   ) do
     def nick
@@ -209,7 +213,9 @@ module TwitchIRC
     if rest.start_with?(":")
       raw_prefix, rest = rest.split(" ", 2)
       if (raw_prefix.index('@') == nil)
-        # puts("fail_@")
+        # QTODO: send these to event pipeline as non-message event type
+        puts("unable to find @: #{raw_prefix}")
+        puts("--------------\n#{rest}\n------------")
         return
       end
 
@@ -220,7 +226,8 @@ module TwitchIRC
       name_end  = raw_prefix.index('.', name_strt)
       name      = raw_prefix[name_strt...name_end]
 
-      msg_idx   = rest.index("#{$channelName}") + $channelName.length + 2
+      # QTODO: this needs to be a case-insensitive
+      msg_idx   = rest.index("#{$channelName}") + "#{$channelName}".length + 2
 
 
       if   (name == ":tmi")
@@ -233,7 +240,9 @@ module TwitchIRC
       msg_obj[:name] = name
       msg_obj[:txt]  = rest[msg_idx..-1]
 
-      puts("txt: #{msg_obj[:txt]}")
+      return msg_obj
+
+      # puts("#{msg_obj[:name]}: #{msg_obj[:txt]}")
     end
 
 
@@ -274,7 +283,7 @@ module TwitchIRC
       message: JSON.generate(msg)
     )
 
-    # puts("#{msg.prefix}: \n#{msg.txt}")
+    # puts("#{msg.name}: #{msg.txt}")
 
 
   end
@@ -340,7 +349,7 @@ module TwitchIRC
             parsed_tags[:twitch_emotes] = 0
           end
         when ("color")
-          parsed_tags[:color]            = tag_val
+          parsed_tags[:color]            = tag_val != "" ? tag_val : 'pink'
         when ("display-name")
           parsed_tags[:display_name]     = tag_val
         when ("subscriber")           # is user subscribed
@@ -351,6 +360,8 @@ module TwitchIRC
           parsed_tags[:user_id]          = tag_val
       end
     end
+
+    # puts("#{parsed_tags[:name]} : #{parsed_tags[:color]}")
 
     return parsed_tags
   end
@@ -396,8 +407,11 @@ EM.run do
     Tws.send("JOIN ##{$channelName}")
   end
 
+
   Tws.on :message do |e|
     data = e.data
+
+    # puts("\n\nWhole message: #{data}\n\n")
 
     #QTODO: add a PONG response to PING
     # puts "Received:\n#{data}"
@@ -405,13 +419,17 @@ EM.run do
     if data.start_with?("PING")
       substr = data[index]
       Tws.send("PONG #{substr}")
+      # QTODO: PONG should go to event pipeline as non-message event type
       puts "PONG"
     else
       msg = TwitchIRC.parse(data)
       # TwitchIRC.get_7TV_emotes()
 
+      if (msg != nil) then
+        puts("#{msg[:name]}: #{msg[:txt]}\n")
 
-      # puts("#{msg}\n\n")
+      end
+
     end
 
 
@@ -424,12 +442,17 @@ EM.run do
 
     # that gives us a static target on the page
     # in your script that is parsing the chat, we can broadcast via
-    # broadcast_append_to(
-    #   stream_name,
-    #   target: "chat_feed",
-    #   partial: "messages/chat_message",
-    #   locals: { message: message }
-    # )
+    if (msg != nil) then
+      Rails.application.reloader.wrap do
+        Turbo::StreamsChannel.broadcast_append_to(
+          :chat,
+          target: "chat_feed",
+          partial: "chat/chat_message",
+
+          locals: { message: msg, ChannelName: $channelName }
+        )
+      end
+    end
 
 
   end
