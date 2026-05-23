@@ -1,5 +1,7 @@
 services:
   railsapp:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     image: orinoco/railsapp
     ports:
       - "${ORINOCO_WEB_PORT}:3000"
@@ -21,6 +23,8 @@ services:
         condition: service_healthy
         restart: true
   obs-bridge-worker:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     image: orinoco/railsapp
     command: ["bundle", "exec", "rails", "runner", "ObsBridgeWorker.new.run"]
     environment: *railsapp_environment

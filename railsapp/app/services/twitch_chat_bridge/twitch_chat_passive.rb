@@ -10,6 +10,8 @@ $channelName        = TwitchConfig.first.channel_name
 $botName            = "justinfan69420"
 $TwitchWebSocketUrl = 'wss://irc-ws.chat.twitch.tv:443'
 $_7TV_WebSocketUrl  = "https://7tv.io/v3/emote-sets/global"    #users/twitch/#{channelName}"
+$stdout.sync        = true
+$stderr.sync        = true
 
 
 # Meleneth
