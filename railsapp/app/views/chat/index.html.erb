@@ -31,11 +31,9 @@
   <% end %>
 
 
-
-
-
-
   <%= turbo_stream_from :chat %>
+
+  <%= render partial: "chat_message", collection: @messages, as: :message %>
 
   <div
     id="chat_feed"

@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-#this is the reader
+#this is the reader (of what?)
 
 require 'json'
 require 'aws-sdk-sns'

@@ -158,22 +158,7 @@ module TwitchIRC
 
 
 
-  # def TwitchIRC_request_emitter
-  #   @twitch_request_emitter ||= lambda do |request|
-  #     sns.publish(
-  #       topic_arn: topology.topic_arn(Orinoco::Messaging::Names::TWITCH_CHAT_MESSAGE_TOPIC),
-  #       message: JSON.generate(request)
-  #     )
-  #   end
-  # end
 
-  # def sns
-  #   @sns ||= Aws::SNS::Client.new(**app_config.event_pipeline.aws_client_options)
-  # end
-
-  # def redis
-  #   @redis ||= Redis.new(url: app_config.scoreboard.redis_url)
-  # end
 
   module_function
 
@@ -221,14 +206,11 @@ module TwitchIRC
         return
       end
 
-      # puts("=====\nrest: #{rest}\n-------\n")
-      # puts("\n=======\n#{raw_prefix}\n-----+++\n")
-
       name_strt = raw_prefix.index('@') + 1
       name_end  = raw_prefix.index('.', name_strt)
       name      = raw_prefix[name_strt...name_end]
 
-      # QTODO: this needs to be a case-insensitive
+      # QTODO: this needs to be case-insensitive
       msg_idx   = rest.index("#{$channelName}") + "#{$channelName}".length + 2
 
 
@@ -248,25 +230,6 @@ module TwitchIRC
     end
 
 
-
-
-
-    # command, rest = rest.split(" ", 2)
-
-    # params = []
-    # text = nil
-
-    # while rest && !rest.empty?
-    #   if rest.start_with?(":")
-    #     text = rest[1..]
-    #     break
-    #   end
-
-    #   param, new_rest = rest.split(" ", 2)
-    #   params << param
-    #   rest = new_rest.to_s.sub(/\A +/, "")
-    # end
-
     msg = Message.new(
       tags: tags,
       name: name,
@@ -277,13 +240,6 @@ module TwitchIRC
     )
 
 
-    config = Rails.configuration.x
-    topology = config.orinoco.messaging_topology
-    sns = Aws::SNS::Client.new(**config.event_pipeline.aws_client_options)
-    sns.publish(
-      topic_arn: topology.topic_arn(Orinoco::Messaging::Names::TWITCH_CHAT_MESSAGE_TOPIC),
-      message: JSON.generate(msg)
-    )
 
     # puts("#{msg.name}: #{msg.txt}")
 
@@ -293,26 +249,6 @@ module TwitchIRC
 
 
   def parse_twitch_tags(raw_tags)
-
-    # Received: @badge-info=;badges=;client-nonce=ad842827a8d84cd9aa581602658dea9d;color=;
-    # display-name=Meleneth;emote-only=1;
-    #
-    #
-    # emotes=
-    # emotesv2_5860ce75b7fb4e10ad885c1d11972050:38-43/
-    # 425618:48-50/
-    # 58765:55-65/
-    # emotesv2_664adb5cf4fb4bbcba5fc13d7a50f742:0-15/
-    # emotesv2_987e95af119f4c248a558922773359d6:18-33;
-    #
-    #
-    # first-msg=0;flags=;
-    # id=e33da662-42df-4ff3-8231-38361bfcf579;
-    # mod=0;returning-chatter=0;room-id=176050880;subscriber=0;
-    # tmi-sent-ts=1776392432144;turbo=0;user-id=39179420;
-    # user-type= :meleneth!meleneth@meleneth.tmi.twitch.tv PRIVMSG #quantumapprentice :hitohaScuffedRGB  swashb3Duckknife    BopBop    LUL    NotLikeThis
-    # {message_id: "194f7be8-d3b0-418b-9923-4e77b6324f79", sequence_number: nil}
-
     parsed_tags = {}
 
     raw_tags.split(";").each_with_object({}) do |pair, out|
@@ -342,9 +278,6 @@ module TwitchIRC
               end
 
               emote_dict[emote_parts[0]] = txt_pos
-
-              # a, b = txt_pos
-              # puts("\n=======\nemote: #{emote_parts[0]}\npos: #{txt_pos[0][:startPosition]} : #{txt_pos[0][:endPosition]}")
             end
             parsed_tags[:twitch_emotes] = emote_dict
           else
@@ -416,10 +349,6 @@ EM.run do
   Tws.on :message do |e|
     data = e.data
 
-    # puts("\n\nWhole message: #{data}\n\n")
-
-    #QTODO: add a PONG response to PING
-    # puts "Received:\n#{data}"
     index = data.index(":")
     if data.start_with?("PING")
       substr = data[index]
@@ -445,8 +374,51 @@ EM.run do
 
 
 
-    # that gives us a static target on the page
-    # in your script that is parsing the chat, we can broadcast via
+
+    ##QTODO:
+    ## we don't want it to blind render every message,
+    ## we want a way to be able to intercept the messages,
+    ## filter out stuff we don't want to keep,
+    # msg = chat_filter(msg)
+
+
+    ## then forward it into a good messages queue
+    # good_msgs = msg
+    config = Rails.configuration.x
+    topology = config.orinoco.messaging_topology
+    sns = Aws::SNS::Client.new(**config.event_pipeline.aws_client_options)
+    sns.publish(
+      topic_arn: topology.topic_arn(Orinoco::Messaging::Names::TWITCH_CHAT_MESSAGE_TOPIC),
+      message: JSON.generate(msg)
+    )
+
+    # def TwitchIRC_request_emitter
+    #   @twitch_request_emitter ||= lambda do |request|
+    #     sns.publish(
+    #       topic_arn: topology.topic_arn(Orinoco::Messaging::Names::TWITCH_CHAT_MESSAGE_TOPIC),
+    #       message: JSON.generate(request)
+    #     )
+    #   end
+    # end
+
+    # def sns
+    #   @sns ||= Aws::SNS::Client.new(**app_config.event_pipeline.aws_client_options)
+    # end
+
+    def redis
+      app_config = Rails.configuration.x
+      @redis ||= Redis.new(url: app_config.scoreboard.redis_url)
+    end
+
+    ## to then get rendered and pushed into an array on redis
+    if (msg != nil) then
+      puts(msg)
+      redis.rpush("twitch:chat:history", msg.to_json)
+    end
+
+
+    ## so we can re-load the history after page navigation
+
     if (msg != nil) then
       Rails.application.reloader.wrap do
         Turbo::StreamsChannel.broadcast_append_to(
