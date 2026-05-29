@@ -410,16 +410,11 @@ EM.run do
       @redis ||= Redis.new(url: app_config.scoreboard.redis_url)
     end
 
-    ## to then get rendered and pushed into an array on redis
     if (msg != nil) then
-      puts(msg)
+    ## to then get rendered and pushed into an array on redis
       redis.rpush("twitch:chat:history", msg.to_json)
-    end
-
 
     ## so we can re-load the history after page navigation
-
-    if (msg != nil) then
       Rails.application.reloader.wrap do
         Turbo::StreamsChannel.broadcast_append_to(
           :chat,
