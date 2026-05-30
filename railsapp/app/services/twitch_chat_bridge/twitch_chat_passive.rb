@@ -179,6 +179,36 @@ module TwitchIRC
   end
 
 
+  def get_emote_list(emotes)
+
+    if (emotes[:twitch_emotes] == nil)
+      return
+    end
+
+    emote_arr = []
+
+    emotes[:twitch_emotes].each do |emote_id, pos|
+      cdn_url = "https://static-cdn.jtvnw.net/emoticons/v2/"  ##<id>/<format>/<theme_mode>/<"
+      out_url = "#{cdn_url}#{emote_id}/default/dark/2.0"
+
+      pos.each do |idx|
+        puts("idx: #{idx}")
+
+        emote_arr.push({
+          id: emote_id,
+          url: out_url,
+          start: idx[:startPosition].to_i,
+          end: idx[:endPosition].to_i
+        })
+      end
+
+      emote_arr.sort { |a, b|
+        a[:start] - b[:start]
+      }
+    end
+
+    return emote_arr
+  end
 
 
 
@@ -195,6 +225,8 @@ module TwitchIRC
       raw_tags, rest = rest.split(" ", 2)
       tags = parse_twitch_tags(raw_tags[1..])
       msg_obj[:tags] = tags
+
+      msg_obj[:emotes] = get_emote_list(tags)
     end
 
     if rest.start_with?(":")
@@ -378,12 +410,12 @@ EM.run do
     ##QTODO:
     ## we don't want it to blind render every message,
     ## we want a way to be able to intercept the messages,
+
     ## filter out stuff we don't want to keep,
-    # msg = chat_filter(msg)
-
-
     ## then forward it into a good messages queue
-    # good_msgs = msg
+    # good_msg, bad_msg = chat_filter(msg)
+
+
     config = Rails.configuration.x
     topology = config.orinoco.messaging_topology
     sns = Aws::SNS::Client.new(**config.event_pipeline.aws_client_options)
