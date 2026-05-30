@@ -21,6 +21,10 @@ services:
       orinoco-db:
         condition: service_healthy
         restart: true
+    volumes:
+      - ./railsapp:/rails
+      - bundle:/usr/local/bundle
+
   goaws:
     ports:
     - "${GOAWS_WEB_PORT}:4100"
@@ -36,6 +40,9 @@ services:
       orinoco-db:
         condition: service_healthy
         restart: true
+    volumes:
+      - ./railsapp:/rails
+      - bundle:/usr/local/bundle
   twitch-chat-worker:
     environment:
       - DATABASE_URL=${ORINOCO_DB_DATABASE_URL}
@@ -48,3 +55,8 @@ services:
       orinoco-db:
         condition: service_healthy
         restart: true
+    volumes:
+      - ./railsapp:/rails
+      - bundle:/usr/local/bundle
+volumes:
+  bundle:
