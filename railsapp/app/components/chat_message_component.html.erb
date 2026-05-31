@@ -1,5 +1,5 @@
 <!-- template for twitch chat messages -->
-<div id="<%= "chat_message_#{SecureRandom.hex(8)}" %>"
+<div id="chat_message_<%= SecureRandom.hex(8) %>"
   data-controller="ephemeral"
   data-ephemeral-delay-value="5000"
   class="items-start gap-2
@@ -10,11 +10,11 @@
           max-w-sm"
   >
 
-  <span class="font-bold" style="color: <%=message[:tags][:color]%>">
-    <%= message[:name] %>:
+  <span class="font-bold" style="color: <%= @message[:tags][:color]%>">
+    <%= @message[:name] %>:
   </span>
   <span class="text-white">
-    <%= message[:txt]  %>
+    <%= @message[:txt]  %>
   </span>
 
 

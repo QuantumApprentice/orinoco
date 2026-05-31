@@ -31,24 +31,13 @@
 
 
   <%= turbo_stream_from :chat %>
-
-
   <div
     id="chat_feed"
     class="h-96 overflow-y-auto"
     data-controller="autoscroll"
     style="height: calc(100vh-160px)"
   >
-
-
-    <%# <%= render partial: "chat_message", collection: @messages, as: :message %> %>
-
-    <%= render ChatMessageComponent.with_collection_parameter(@messages.compact!) %>
-
-
+    <%= render ChatMessageComponent.with_collection(@messages.compact) %>
   </div>
-
-
-
 
 </div>

@@ -38,6 +38,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     image: orinoco/railsapp
-    command: ["bundle", "exec", "rails", "runner", "TwitchChatMessageProcessor.new.run"]
+    command: ["bundle", "exec", "rails", "runner", "TwitchChatBridge::TwitchChatMessageProcessor.new.run"]
     environment: *railsapp_environment
     depends_on: *railsapp_depends_on
