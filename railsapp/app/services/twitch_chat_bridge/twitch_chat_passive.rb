@@ -109,7 +109,17 @@ $stderr.sync        = true
 # end
 
 
+def app_config
+  @app_config ||= Rails.configuration.x
+end
 
+def topology
+  @topology ||= app_config.orinoco.messaging_topology
+end
+
+def sns
+  @sns ||= Aws::SNS::Client.new(**app_config.event_pipeline.aws_client_options)
+end
 
 EM.run do
   puts("are we walkin here?")
@@ -145,14 +155,15 @@ EM.run do
 
       if msg != nil then
         puts("#{msg.name}: #{msg.txt}\n")
+        sns.publish(
+          topic_arn: topology.topic_arn(Orinoco::Messaging::Names::TWITCH_CHAT_MESSAGE_TOPIC),
+          message: JSON.generate(msg)
+        )
       end
     end
 
     # puts("getting 7TV stuff")
     # TwitchIRC.get_7TV_emotes(_7TV_WebSocketUrl)
-
-
-
 
     # #QTODO:
     ## we don't want it to blind render every message,
@@ -161,48 +172,5 @@ EM.run do
     ## filter out stuff we don't want to keep,
     ## then forward it into a good messages queue
     # good_msg, bad_msg = chat_filter(msg)
-
-
-    config = Rails.configuration.x
-    topology = config.orinoco.messaging_topology
-    sns = Aws::SNS::Client.new(**config.event_pipeline.aws_client_options)
-    sns.publish(
-      topic_arn: topology.topic_arn(Orinoco::Messaging::Names::TWITCH_CHAT_MESSAGE_TOPIC),
-      message: JSON.generate(msg)
-    )
-
-    # def TwitchIRC_request_emitter
-    #   @twitch_request_emitter ||= lambda do |request|
-    #     sns.publish(
-    #       topic_arn: topology.topic_arn(Orinoco::Messaging::Names::TWITCH_CHAT_MESSAGE_TOPIC),
-    #       message: JSON.generate(request)
-    #     )
-    #   end
-    # end
-
-    # def sns
-    #   @sns ||= Aws::SNS::Client.new(**app_config.event_pipeline.aws_client_options)
-    # end
-
-    def redis
-      app_config = Rails.configuration.x
-      @redis ||= Redis.new(url: app_config.scoreboard.redis_url)
-    end
-
-    if msg != nil then
-      ## to then get rendered and pushed into an array on redis
-      redis.rpush("twitch:chat:history", msg.to_json)
-
-      ## so we can re-load the history after page navigation
-      Rails.application.reloader.wrap do
-        Turbo::StreamsChannel.broadcast_append_to(
-          :chat,
-          target: "chat_feed",
-          partial: "chat/chat_message",
-
-          locals: { message: msg, ChannelName: $channelName }
-        )
-      end
-    end
   end
 end
