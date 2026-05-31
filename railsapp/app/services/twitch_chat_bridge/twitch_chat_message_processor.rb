@@ -21,6 +21,7 @@ module TwitchChatBridge
       )
 
       @running = true
+      puts "twitch chat message processor initialized"
     end
 
     def run
