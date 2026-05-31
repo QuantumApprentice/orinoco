@@ -34,3 +34,10 @@ services:
     command: ["bundle", "exec", "rails", "runner", "app/services/twitch_chat_bridge/twitch_chat_passive.rb"]
     environment: *railsapp_environment
     depends_on: *railsapp_depends_on
+  twitch-chat-processor:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    image: orinoco/railsapp
+    command: ["bundle", "exec", "rails", "runner", "TwitchChatMessageProcessor.new.run"]
+    environment: *railsapp_environment
+    depends_on: *railsapp_depends_on
