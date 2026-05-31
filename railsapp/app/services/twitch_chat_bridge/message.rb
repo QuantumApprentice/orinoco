@@ -4,6 +4,10 @@ module TwitchChatBridge
   class Message
     attr_reader :tags, :emotes, :name, :txt
 
+    def [](key)
+      public_send(key.to_sym)
+    end
+
     def initialize(tags:, emotes:, name:, txt:)
       @tags = tags || {}
       @emotes = emotes || []
