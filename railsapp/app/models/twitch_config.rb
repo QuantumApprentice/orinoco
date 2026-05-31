@@ -1,0 +1,2 @@
+class TwitchConfig < ApplicationRecord
+end

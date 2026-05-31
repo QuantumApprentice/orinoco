@@ -1,74 +1,116 @@
-How do I run this?
+## How do I run this?
+
+The development Docker containers now use bind mounts, so changes made in `railsapp/` on your host should be visible inside the running containers.
+
+From the project root:
 
 ```bash
+./dc_dev build
 ./dc_dev up -d
-cd railsapp
-./bin/dev
+./dc_dev ps
+./dc_dev restart twitch-chat-worker
 ```
-if on windows,
+
+This builds the Rails image and starts the development containers.
+
+The Rails app is available at:
+
+[Docker Orinoco](http://localhost:31050/)
+
+## Running on Windows
+
+From the project root:
 
 ```bash
 ./dc_dev up -d
 cd railsapp
 dev.sh server
-# and in another window
+```
+
+In another terminal:
+
+```bash
+cd railsapp
 dev.sh bridge
 ```
 
-rbenv will help you manage ruby installations. It's a fancy way of being able to install ruby of various versions and have your PATH updated as needed.
+## Running Rails directly on the host
 
-install rbenv via git
+You can still run Rails directly if you prefer:
+
+```bash
+cd railsapp
+bundle install
+./bin/dev
+```
+
+`rbenv` can help manage Ruby versions.
+
+Install rbenv using the official instructions:
 
 [rbenv installation instructions](https://github.com/rbenv/rbenv?tab=readme-ov-file#basic-git-checkout)
 
-once you have your shell updated and reloaded according to those instructions,
+After your shell is updated and reloaded:
 
-`rbenv install 4.0.1`
+```bash
+rbenv install 4.0.1
+rbenv global 4.0.1
+ruby --version
+```
 
-which will install ruby 4.0.1
+Ruby libraries are called gems. `bundler` installs the gems listed in `Gemfile` / `Gemfile.lock`, similar to how npm installs packages from `package.json`.
 
-`rbenv global 4.0.1`
+```bash
+bundle install
+```
 
-which will set ruby 4.0.1 as the version you use globally
+## Docker Desktop
 
-`ruby --version`
-
-will show that the right version of ruby is active.
-
-a gem is a ruby library.
-
-bundler will help you install multiple gems at the same time via Gemfile / Gemfile.lock, which is a lot like npm's package.json
+Install Docker Desktop if needed:
 
 [Docker Desktop install on Linux](https://docs.docker.com/desktop/setup/install/linux/debian/)
 
-dev environment:
+## Environment variables
 
-this will build the rails docker image
-./dc_dev build
+Environment variables configure how the services talk to each other.
 
-this will start the containers
-./dc_dev up -d
+For Docker Compose, environment variables live in:
 
-dev container is cool, but for actually hacking on code you'll want to run rails directly.
-to do this
+```text
+test.env
+development.env
+production.env
+```
 
-    cd railsapp
-    bundle install
-    ./bin/dev
+For local Rails / Foreman-style execution, environment variables live in:
 
-The reason for this is we don't have the dev container setup to load the source code, so it will always be out of date.
-If we change to a bind mount and make sure the config is correct we should be able to get rid of this and just dev in
-the container, but that's not where we are yet.
+```text
+railsapp/.env.dev.orinoco
+railsapp/.env.test.orinoco
+```
 
-the environment variables are used to configure services wiring to each other.
+Inside `railsapp/`, `./r_dev` is a wrapper script similar to `dc_dev`. It runs Rails commands with the Orinoco development environment loaded from `.env.dev.orinoco`.
 
-For docker, the environment variables are in test.env, development.env, and production.env
+## Service URLs
 
-For foreman, the environment variables are in rails/.env.dev.orinoco and railsapp/.env.test.orinoco
-
-in the orinoco directory (the rails app)
-./r_dev is a script wrapper like dc_dev - this one runs rails with the orinoco service environment variables set from .env.dev.orinoco
+Docker Rails app:
 
 [Docker Orinoco](http://localhost:31050/)
 
+Foreman/local Rails app:
+
 [Foreman Orinoco](http://localhost:33230/)
+
+## Useful service commands
+
+Open a Redis CLI:
+
+```bash
+./dc_dev exec scoreboard-redis redis-cli
+```
+
+Open a Postgres CLI:
+
+```bash
+./dc_dev exec orinoco-db psql -U orinoco-db-development-user -d orinoco-db_development
+```

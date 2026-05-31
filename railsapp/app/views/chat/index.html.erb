@@ -1,0 +1,54 @@
+<!-- This is the actual twitch chat connection window -->
+<div>
+  <h1 class="font-bold text-4xl">Twitch Chat</h1>
+  <p>Find me in app/views/chat/index.html.erb</p>
+
+  <%=link_to "Connect To Twitch Chat (read only)"%>
+  <br/>
+
+  <% @twitch_configs.each do |cfg| %>
+    <%=form_with model: cfg do |chat|%>
+      <%="Channel: "%>
+      <%= chat.text_field :channel_name,
+      class: cx(
+              "block w-full rounded-md border px-3 py-2 shadow-sm",
+              "border-gray-300 bg-white text-gray-900",
+              "placeholder:text-gray-400",
+              "focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500",
+              "dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100",
+              "dark:placeholder:text-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+            )
+      %>
+      <%= chat.submit "Connect",
+        class: cx(
+              "inline-flex items-center rounded-md px-4 py-2 text-sm font-medium shadow-sm",
+              "bg-blue-600 text-white hover:bg-blue-700",
+              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+              "dark:bg-blue-500 dark:hover:bg-blue-400 dark:focus:ring-offset-gray-800"
+            )%>
+    <%end%>
+  <% end %>
+
+
+  <%= turbo_stream_from :chat %>
+
+
+  <div
+    id="chat_feed"
+    class="h-96 overflow-y-auto"
+    data-controller="autoscroll"
+    style="height: calc(100vh-160px)"
+  >
+
+
+    <%# <%= render partial: "chat_message", collection: @messages, as: :message %> %>
+
+    <%= render ChatMessageComponent.with_collection_parameter(@messages.compact!) %>
+
+
+  </div>
+
+
+
+
+</div>

@@ -38,8 +38,8 @@ class ObsBridgeWorker
 
   def build_session_runner
     ObsBridge::ObswsSessionRunner.new(
-      host: config.obs_bridge.obs_host,
-      port: config.obs_bridge.obs_port
+      host: obs_host,
+      port: obs_port
     )
   end
 
@@ -133,6 +133,18 @@ class ObsBridgeWorker
 
   def sns
     @sns ||= Aws::SNS::Client.new(**config.event_pipeline.aws_client_options)
+  end
+
+  def obs_host
+    config = ObsConfig.first
+    return config.host if config
+    config.obs_bridge.obs_host
+  end
+
+  def obs_port
+    config = ObsConfig.first
+    return config.port if config
+    config.obs_bridge.obs_port
   end
 
   def redis
