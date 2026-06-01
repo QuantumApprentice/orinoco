@@ -66,13 +66,14 @@ module TwitchChatBridge
           emote_arr << {
             id: emote_id,
             url: out_url,
-            start: idx[:startPosition].to_i,
-            end: idx[:endPosition].to_i
+            start_idx: idx[:startPosition].to_i,
+            end_index: idx[:endPosition].to_i
           }
         end
       end
 
       emote_arr.sort_by { |emote| emote[:start] }
+      return emote_arr
     end
 
     def parse_twitch_tags(raw_tags)
