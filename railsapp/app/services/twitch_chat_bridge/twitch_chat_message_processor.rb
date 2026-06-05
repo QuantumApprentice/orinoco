@@ -91,11 +91,12 @@ module TwitchChatBridge
         Turbo::StreamsChannel.broadcast_append_to(
           :chat,
           target: "chat_feed",
-          partial: "chat/chat_message",
-          locals: {
-            message: message,
-            ChannelName: channel_name
-          }
+          # partial: "chat/chat_message",
+          # locals: {
+          #   message: message,
+          #   ChannelName: channel_name
+          # }
+          renderable: ChatMessageComponent.new(message:)
         )
       end
     end
