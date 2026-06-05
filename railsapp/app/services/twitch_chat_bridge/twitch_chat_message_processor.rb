@@ -91,6 +91,7 @@ module TwitchChatBridge
         Turbo::StreamsChannel.broadcast_append_to(
           :chat,
           target: "chat_feed",
+          layout: false,
           # partial: "chat/chat_message",
           # locals: {
           #   message: message,

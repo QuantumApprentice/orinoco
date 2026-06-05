@@ -3,7 +3,7 @@ class ChatController < ApplicationController
     @twitch_configs = TwitchConfig.all
     @messages = redis.lrange("twitch:chat:history",0,-1)
     @messages = @messages.map { |raw|
-      JSON.parse(raw, symbolize_names: true)
+      TwitchChatBridge::Message.from_json(raw)
     }
   end
 
