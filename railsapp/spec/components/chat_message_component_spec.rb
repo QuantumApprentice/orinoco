@@ -1,0 +1,96 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe ChatMessageComponent, type: :component do
+  include ViewComponent::TestHelpers
+
+  it "renders a parsed twitch chat message with emotes replaced" do
+    message = TwitchChatBridge::Message.from_json(<<~JSON)
+      {
+        "tags": {
+          "color": "#5F9EA0",
+          "display_name": "QuantumApprentice",
+          "twitch_emotes": {
+            "emotesv2_7303302352f44b5cb112ba52f438c890": [
+              {
+                "startPosition": "42",
+                "endPosition": "55"
+              }
+            ],
+            "emotesv2_b8792b3f4be2493499640ce0d30350cb": [
+              {
+                "startPosition": "57",
+                "endPosition": "74"
+              }
+            ],
+            "emotesv2_35afd89499c240e7a57abcb30a7c0168": [
+              {
+                "startPosition": "0",
+                "endPosition": "11"
+              }
+            ],
+            "emotesv2_fe1ccb3a4e4b4b1c9851b30546490861": [
+              {
+                "startPosition": "13",
+                "endPosition": "24"
+              }
+            ],
+            "emotesv2_84b3b3e91a2d4395befc55a128463c36": [
+              {
+                "startPosition": "26",
+                "endPosition": "40"
+              }
+            ]
+          },
+          "subscriber": true,
+          "user_id": "176050880"
+        },
+        "emotes": [
+          {
+            "id": "emotesv2_7303302352f44b5cb112ba52f438c890",
+            "url": "https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_7303302352f44b5cb112ba52f438c890/default/dark/2.0",
+            "start_idx": 42,
+            "end_index": 55
+          },
+          {
+            "id": "emotesv2_b8792b3f4be2493499640ce0d30350cb",
+            "url": "https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_b8792b3f4be2493499640ce0d30350cb/default/dark/2.0",
+            "start_idx": 57,
+            "end_index": 74
+          },
+          {
+            "id": "emotesv2_35afd89499c240e7a57abcb30a7c0168",
+            "url": "https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_35afd89499c240e7a57abcb30a7c0168/default/dark/2.0",
+            "start_idx": 0,
+            "end_index": 11
+          },
+          {
+            "id": "emotesv2_fe1ccb3a4e4b4b1c9851b30546490861",
+            "url": "https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_fe1ccb3a4e4b4b1c9851b30546490861/default/dark/2.0",
+            "start_idx": 13,
+            "end_index": 24
+          },
+          {
+            "id": "emotesv2_84b3b3e91a2d4395befc55a128463c36",
+            "url": "https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_84b3b3e91a2d4395befc55a128463c36/default/dark/2.0",
+            "start_idx": 26,
+            "end_index": 40
+          }
+        ],
+        "name": "quantumapprentice",
+        "txt": "quantu22Burn quantu22Boom quantu22Dogmeat quantu22Vdeath quantu22Flamedance",
+        "display_name": "QuantumApprentice"
+      }
+    JSON
+
+    rendered = render_inline(described_class.new(message: message))
+    html = rendered.to_html
+
+    expect(html).to include('style="color: #5F9EA0"')
+    expect(html).to include("quantumapprentice:")
+    expect(html.scan("<img ").length).to eq(5)
+    expect(html).to include("https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_35afd89499c240e7a57abcb30a7c0168/default/dark/2.0")
+    expect(html).to include("https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_84b3b3e91a2d4395befc55a128463c36/default/dark/2.0")
+  end
+end
