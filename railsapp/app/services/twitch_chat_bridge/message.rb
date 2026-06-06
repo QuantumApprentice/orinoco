@@ -2,15 +2,18 @@
 
 module TwitchChatBridge
   class Message
-    attr_reader :tags, :emotes, :name, :txt
+    attr_accessor :tags, :twitch_emotes, :name, :txt
 
     def [](key)
       public_send(key.to_sym)
     end
+    def []=(key, val)
+      public_send("#{key}=",val)
+    end
 
-    def initialize(tags:, emotes:, name:, txt:)
+    def initialize(tags:, twitch_emotes:, name:, txt:)
       @tags = tags || {}
-      @emotes = emotes || []
+      @twitch_emotes = twitch_emotes || []
       @name = name
       @txt = txt
     end
@@ -22,7 +25,7 @@ module TwitchChatBridge
     def as_json(*)
       {
         tags: tags,
-        emotes: emotes,
+        twitch_emotes: twitch_emotes,
         name: name,
         txt: txt,
         display_name: display_name
@@ -38,7 +41,7 @@ module TwitchChatBridge
 
       new(
         tags: data.fetch(:tags, {}),
-        emotes: data.fetch(:emotes, []),
+        twitch_emotes: data.fetch(:twitch_emotes, []),
         name: data.fetch(:name),
         txt: data.fetch(:txt)
       )

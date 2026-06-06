@@ -10,14 +10,12 @@ module TwitchChatBridge
     def parse(line)
       rest = line.chomp
       tags = {}
-      emotes = []
 
       if rest.start_with?("@")
         raw_tags, rest = rest.split(" ", 2)
         return nil if rest.blank?
 
         tags = parse_twitch_tags(raw_tags[1..])
-        emotes = get_emote_list(tags)
       end
 
       return nil unless rest.start_with?(":")
@@ -47,34 +45,12 @@ module TwitchChatBridge
 
       TwitchChatBridge::Message.new(
         tags: tags,
-        emotes: emotes,
+        twitch_emotes: tags[:twitch_emotes],
         name: name,
         txt: rest[msg_idx..]
       )
     end
 
-    def get_emote_list(emotes)
-      return [] unless emotes[:twitch_emotes].present?
-
-      emote_arr = []
-
-      emotes[:twitch_emotes].each do |emote_id, positions|
-        cdn_url = "https://static-cdn.jtvnw.net/emoticons/v2/"
-        out_url = "#{cdn_url}#{emote_id}/default/dark/2.0"
-
-        positions.each do |idx|
-          emote_arr << {
-            id: emote_id,
-            url: out_url,
-            start_idx: idx[:startPosition].to_i,
-            end_index: idx[:endPosition].to_i
-          }
-        end
-      end
-
-      emote_arr.sort_by { |emote| emote[:start] }
-      return emote_arr
-    end
 
     def parse_twitch_tags(raw_tags)
       parsed_tags = {}
@@ -104,20 +80,32 @@ module TwitchChatBridge
 
     def parse_emotes_tag(tag_val)
       return nil if tag_val.blank?
+      emote_list = []
 
-      tag_val.split("/", -1).each_with_object({}) do |emote, emote_dict|
+      # Change "tag_val.split("/", -1).each do |emote|" to "for emote in tag_val.split("/", -1)"
+      tag_val.split("/", -1).each do |emote|
         emote_id, raw_positions = emote.split(":", 2)
         next if emote_id.blank? || raw_positions.blank?
 
-        emote_dict[emote_id] = raw_positions.split(",").map do |position|
-          start_position, end_position = position.split("-", 2)
+        cdn_url = "https://static-cdn.jtvnw.net/emoticons/v2/"
+        out_url = "#{cdn_url}#{emote_id}/default/dark/2.0"
 
-          {
-            startPosition: start_position,
-            endPosition: end_position
-          }
+        raw_positions.split(",").each do |position|
+          start_position, end_position = position.split("-", 2)
+          emote_list.push({
+            id:        emote_id,
+            url:       out_url,
+            start_idx: start_position.to_i,
+            end_index: end_position.to_i
+          })
         end
       end
+
+      # Rails.logger = ActiveSupport::Logger.new($stdout)
+      # Rails.logger.level = Logger::INFO
+      # Rails.logger.info("DEBUG #{emote_list.sort_by { |h| h[:end_index] }}")
+
+      return emote_list.sort_by { |h| h[:end_index] }
     end
 
     def unescape_tag_value(value)
