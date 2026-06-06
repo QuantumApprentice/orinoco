@@ -82,7 +82,11 @@ module TwitchChatBridge
       return nil if tag_val.blank?
       emote_list = []
 
-      # Change "tag_val.split("/", -1).each do |emote|" to "for emote in tag_val.split("/", -1)"
+      # QTODO: Change 
+      # "tag_val.split("/", -1).each do |emote|"
+      # to
+      # "for emote in tag_val.split("/", -1)"
+      # and see if I like it
       tag_val.split("/", -1).each do |emote|
         emote_id, raw_positions = emote.split(":", 2)
         next if emote_id.blank? || raw_positions.blank?
