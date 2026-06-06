@@ -3,4 +3,4 @@ services:
     volumes:
       - ../railsapp:/rails:cached
     tmpfs:
-        - /workspace/railsapp/tmp/pids
+        - /rails/tmp/pids
