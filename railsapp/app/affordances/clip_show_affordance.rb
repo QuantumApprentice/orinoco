@@ -11,6 +11,7 @@ ClipShowAffordance = Affordance.new(:clip_show) do |a|
         )
       end
       .each do |placement|
+        warn("\n\n  doing something?\n\n")
         ctx.emit_request.call(
           "requestType" => "SetSceneItemEnabled",
           "requestData" => {
