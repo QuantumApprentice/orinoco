@@ -1,1 +1,19 @@
 @import "tailwindcss";
+/* TODO remove all these before shipping */
+@source inline("{hover:,focus:,dark:,dark:hover:,dark:focus:,}bg-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,white,black}-{50,{100..900..100},950}");
+@source inline("{hover:,focus:,dark:,dark:hover:,dark:focus:,}text-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,white,black}-{50,{100..900..100},950}");
+@source inline("{hover:,focus:,dark:,dark:hover:,dark:focus:,}border-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,white,black}-{50,{100..900..100},950}");
+@source inline("{hover:,focus:,dark:,}ring-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,white,black}-{50,{100..900..100},950}");
+@source inline("{hover:,focus:,dark:,}outline-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,white,black}-{50,{100..900..100},950}");
+@source inline("{hover:,focus:,dark:,}placeholder-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,white,black}-{50,{100..900..100},950}");
+@source inline("{hover:,dark:,}from-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,white,black}-{50,{100..900..100},950}");
+@source inline("{hover:,dark:,}via-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,white,black}-{50,{100..900..100},950}");
+@source inline("{hover:,dark:,}to-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,white,black}-{50,{100..900..100},950}");
+@source inline("{sm:,md:,lg:,xl:,2xl:,}{m,mx,my,mt,mr,mb,ml,p,px,py,pt,pr,pb,pl,gap,space-x,space-y}-{0..16}");
+@source inline("{sm:,md:,lg:,xl:,2xl:,}{w,h,min-w,min-h,max-w,max-h}-{0..16}");
+@source inline("{sm:,md:,lg:,xl:,2xl:,}{w,h,min-w,min-h,max-w,max-h}-{px,auto,full,screen,min,max,fit}");
+@source inline("{sm:,md:,lg:,xl:,2xl:,}{flex,grid,block,inline,inline-block,inline-flex,hidden,table,absolute,relative,fixed,sticky,static,container}");
+@source inline("{sm:,md:,lg:,xl:,2xl:,}{flex-row,flex-col,flex-wrap,flex-nowrap,items-start,items-end,items-center,items-baseline,items-stretch,justify-start,justify-end,justify-center,justify-between,justify-around,justify-evenly}");
+@source inline("{sm:,md:,lg:,xl:,2xl:,}{rounded,rounded-sm,rounded-md,rounded-lg,rounded-xl,rounded-2xl,rounded-3xl,rounded-full,shadow,shadow-sm,shadow-md,shadow-lg,shadow-xl,shadow-2xl,shadow-none}");
+@source inline("{sm:,md:,lg:,xl:,2xl:,}{text-xs,text-sm,text-base,text-lg,text-xl,text-2xl,text-3xl,text-4xl,font-thin,font-extralight,font-light,font-normal,font-medium,font-semibold,font-bold,font-extrabold,font-black}");
+@source inline("{hover:,focus:,dark:,}bg-{slate,gray,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}/{5,{10..100..5}}");
