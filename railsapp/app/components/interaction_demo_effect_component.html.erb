@@ -1,0 +1,38 @@
+<% if starfall? %>
+  <div
+    class="pointer-events-none fixed top-0 z-10"
+    data-controller="interaction-demo-effect"
+    data-action="animationend->interaction-demo-effect#remove"
+    style="<%= wrapper_style %>; animation: interaction-demo-starfall 3.8s linear forwards;"
+  >
+    <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M28 3L34.7 19.3L52 22L39 34.1L42.1 52L28 43.2L13.9 52L17 34.1L4 22L21.3 19.3L28 3Z" fill="<%= color %>" />
+      <path d="M28 10L32.5 21.1L44 22.9L35.3 31L37.4 42.5L28 36.6L18.6 42.5L20.7 31L12 22.9L23.5 21.1L28 10Z" fill="rgba(255,255,255,0.55)" />
+    </svg>
+  </div>
+<% else %>
+  <div
+    class="pointer-events-none fixed z-10"
+    data-controller="interaction-demo-effect"
+    data-action="animationend->interaction-demo-effect#remove"
+    style="<%= wrapper_style %>; animation: interaction-demo-sunburst 2.6s ease-out forwards;"
+  >
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g opacity="0.92">
+        <% 8.times do |ray| %>
+          <rect
+            x="56"
+            y="2"
+            width="8"
+            height="32"
+            rx="4"
+            fill="<%= color %>"
+            transform="rotate(<%= ray * 45 %> 60 60)"
+          />
+        <% end %>
+      </g>
+      <circle cx="60" cy="60" r="26" fill="<%= color %>" />
+      <circle cx="60" cy="60" r="14" fill="rgba(255,255,255,0.78)" />
+    </svg>
+  </div>
+<% end %>

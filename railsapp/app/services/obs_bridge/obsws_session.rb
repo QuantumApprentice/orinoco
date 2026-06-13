@@ -49,6 +49,24 @@ module ObsBridge
       request_data = request.fetch("requestData", {})
 
       case request_type
+      when "CreateScene"
+        @req.create_scene(
+          request_data.fetch("sceneName")
+        )
+      when "CreateInput"
+        @req.create_input(
+          request_data.fetch("sceneName"),
+          request_data.fetch("inputName"),
+          request_data.fetch("inputKind"),
+          request_data.fetch("inputSettings"),
+          request_data.fetch("sceneItemEnabled", true)
+        )
+      when "SetInputSettings"
+        @req.set_input_settings(
+          request_data.fetch("inputName"),
+          request_data.fetch("inputSettings"),
+          request_data.fetch("overlay", true)
+        )
       when "SetSceneItemEnabled"
         @req.set_scene_item_enabled(
           request_data.fetch("sceneName"),
@@ -59,6 +77,12 @@ module ObsBridge
         @req.set_input_audio_monitor_type(
           request_data.fetch("inputName"),
           request_data.fetch("monitorType")
+        )
+      when "SetSceneItemTransform"
+        @req.set_scene_item_transform(
+          request_data.fetch("sceneName"),
+          request_data.fetch("sceneItemId"),
+          request_data.fetch("sceneItemTransform")
         )
       else
         raise ArgumentError, "unsupported OBS request type #{request_type.inspect}"

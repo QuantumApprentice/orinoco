@@ -5,6 +5,10 @@ Rails.application.routes.draw do
   post "clip_show/play"
   get  "clip_show/get_scenes"
   get  "clip_show" => "clip_show#get_scenes", as: :clip_show
+  get  "interaction_demo" => "interaction_demo#show", as: :interaction_demo
+  post "interaction_demo/starfall" => "interaction_demo#starfall", as: :interaction_demo_starfall
+  post "interaction_demo/sunburst" => "interaction_demo#sunburst", as: :interaction_demo_sunburst
+  post "interaction_demo/wtf" => "interaction_demo#wtf", as: :interaction_demo_wtf
 
   resource :obs_config, only: [ :show, :edit, :update, :create ]
 

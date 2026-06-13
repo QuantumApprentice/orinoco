@@ -3,6 +3,8 @@
 require "json"
 
 class ClipShowController < ApplicationController
+  layout :resolve_layout
+
   # def index
   #  @scenes = Hash.new
   #  @clips = SceneIndex.new(scene: "Clips")
@@ -87,5 +89,9 @@ class ClipShowController < ApplicationController
 
   def app_config
     Rails.configuration.x
+  end
+
+  def resolve_layout
+    turbo_frame_request? ? false : "application"
   end
 end

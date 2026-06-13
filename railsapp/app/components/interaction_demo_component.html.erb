@@ -1,0 +1,118 @@
+<style>
+  @keyframes interaction-demo-starfall {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, -12vh, 0) rotate(0deg) scale(0.7);
+    }
+
+    12% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+      transform: translate3d(var(--interaction-demo-drift), 112vh, 0) rotate(540deg) scale(1.1);
+    }
+  }
+
+  @keyframes interaction-demo-sunburst {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 0, 0) scale(0.2);
+    }
+
+    18% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translate3d(var(--interaction-demo-drift-x), var(--interaction-demo-drift-y), 0) scale(1.55);
+    }
+  }
+</style>
+
+<% if overlay? %>
+  <%= helpers.turbo_stream_from stream_name %>
+  <%= helpers.turbo_stream_from counter_stream_name %>
+
+  <div class="fixed inset-0 overflow-hidden bg-transparent">
+    <div class="pointer-events-none absolute inset-0" id="<%= events_target %>"></div>
+    <div class="pointer-events-none absolute right-6 top-6" id="<%= counter_target %>">
+      <%= render InteractionDemoCounterComponent.new(count: wtf_count) %>
+    </div>
+  </div>
+<% else %>
+  <%= helpers.turbo_stream_from stream_name %>
+  <%= helpers.turbo_stream_from counter_stream_name %>
+
+  <div class="space-y-6 py-6">
+    <%= render CardComponent.new do %>
+      <div class="space-y-4">
+        <div>
+          <h1 class="text-2xl font-semibold">Interaction Demo</h1>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Use this page for streamer-side controls. Point the OBS browser source at the overlay URL below.
+          </p>
+        </div>
+
+        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200">
+          <div>Setup command: <%= setup_command %></div>
+          <div class="mt-2 break-all">Overlay URL: <%= overlay_url %></div>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="grid gap-6 lg:grid-cols-3">
+      <%= render CardComponent.new(classes: "lg:col-span-2") do %>
+        <div class="space-y-4">
+          <h2 class="text-lg font-medium">Demo Triggers</h2>
+          <div class="flex flex-wrap gap-3">
+            <%= button_to "Starfall",
+              interaction_demo_starfall_path,
+              method: :post,
+              class: "rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400" %>
+
+            <%= button_to "Sunburst",
+              interaction_demo_sunburst_path,
+              method: :post,
+              class: "rounded bg-amber-500 px-4 py-2 text-white hover:bg-amber-600 dark:bg-amber-400 dark:hover:bg-amber-300" %>
+
+            <%= button_to "WTF",
+              interaction_demo_wtf_path,
+              method: :post,
+              class: "rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-400" %>
+          </div>
+        </div>
+      <% end %>
+
+      <%= render CardComponent.new do %>
+        <div class="space-y-3">
+          <h2 class="text-lg font-medium">Counter</h2>
+          <div id="<%= counter_target %>">
+            <%= render InteractionDemoCounterComponent.new(count: wtf_count) %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <%= render CardComponent.new do %>
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-medium">Overlay Preview</h2>
+          <a href="<%= overlay_url %>" target="_blank" rel="noopener" class="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+            Open overlay only
+          </a>
+        </div>
+
+        <div class="relative h-[calc(100dvh-16rem)] overflow-hidden rounded-lg border border-gray-200 bg-slate-950 dark:border-gray-700">
+          <div class="pointer-events-none absolute inset-0" id="<%= events_target %>"></div>
+          <div class="pointer-events-none absolute right-6 top-6" id="<%= preview_counter_target %>">
+            <%= render InteractionDemoCounterComponent.new(count: wtf_count) %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
