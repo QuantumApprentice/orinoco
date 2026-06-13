@@ -4,10 +4,18 @@ require "time"
 
 module ObsBridge
   class BridgeState
-    def initialize(redis:, bridge_id: "obs_bridge", clock: -> { Time.now.utc }, default_enabled: false, status_writer: nil)
+    def initialize(
+      redis:,
+      bridge_id: "obs_bridge",
+      clock: -> { Time.now.utc },
+      default_enabled: false,
+      status_writer: nil,
+      inventory_store: nil
+    )
       @bridge_id = bridge_id
       @keys = RedisKeys.new(bridge_id: bridge_id)
       @status_writer = status_writer || ObsBridge::StatusWriter.new(redis: redis, bridge_id: bridge_id)
+      @inventory_store = inventory_store
 
       @clock = clock
       @mutex = Mutex.new
@@ -20,6 +28,7 @@ module ObsBridge
       @last_heartbeat_at = nil
 
       persist!
+      clear_inventory! unless default_enabled
     end
 
     def desired_enabled?
@@ -66,6 +75,8 @@ module ObsBridge
         @runtime_state = "down"
         @last_error = error if error
       end
+
+      clear_inventory!
     end
 
     def capture_all_for(seconds)
@@ -103,6 +114,10 @@ module ObsBridge
     def persist!
       payload = @mutex.synchronize { snapshot_locked }
       @status_writer.write_snapshot(payload)
+    end
+
+    def clear_inventory!
+      @inventory_store&.clear_snapshot!
     end
 
     def mutate_and_persist!

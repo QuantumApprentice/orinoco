@@ -17,6 +17,7 @@ RSpec.describe ObsBridge::InventoryStore do
 
     allow(pipe).to receive(:set)
     allow(pipe).to receive(:del)
+    allow(pipe).to receive(:hdel)
     allow(pipe).to receive(:hset)
 
     allow(ObsBridge::StatusBroadcaster).to receive(:new).and_return(broadcaster)
@@ -178,5 +179,25 @@ RSpec.describe ObsBridge::InventoryStore do
         scene_items_by_scene: {}
       )
     end.to raise_error(ArgumentError, /scene must have a name/)
+  end
+
+  it "clears the stored inventory snapshot" do
+    allow(redis).to receive(:get).with(keys.scenes).and_return(
+      [
+        { sceneName: "Clips" }
+      ].to_json
+    )
+
+    store.clear_snapshot!
+
+    expect(pipe).to have_received(:del).with(keys.scenes)
+    expect(pipe).to have_received(:del).with(keys.scene_items("Clips"))
+    expect(pipe).to have_received(:del).with(keys.input_placements_by_uuid)
+    expect(pipe).to have_received(:hdel).with(
+      keys.status,
+      "inventory_refreshed_at",
+      "inventory_scene_count",
+      "inventory_indexed_input_count"
+    )
   end
 end

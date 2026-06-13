@@ -56,6 +56,23 @@ module ObsBridge
       ObsBridge::StatusBroadcaster.new(bridge_id: @keys.bridge_id, redis: @redis).broadcast!
     end
 
+    def clear_snapshot!
+      scene_names = read_scene_names
+
+      @redis.pipelined do |pipe|
+        pipe.del(@keys.scenes)
+
+        scene_names.each do |scene_name|
+          pipe.del(@keys.scene_items(scene_name))
+        end
+
+        pipe.del(@keys.input_placements_by_uuid)
+        pipe.hdel(@keys.status, "inventory_refreshed_at", "inventory_scene_count", "inventory_indexed_input_count")
+      end
+
+      ObsBridge::StatusBroadcaster.new(bridge_id: @keys.bridge_id, redis: @redis).broadcast!
+    end
+
     private
 
     def read_scene_names

@@ -85,7 +85,8 @@ class ObsBridgeWorker
     @state ||= ObsBridge::BridgeState.new(
       redis: redis,
       bridge_id: bridge_id,
-      default_enabled: config.obs_bridge.default_enabled
+      default_enabled: config.obs_bridge.default_enabled,
+      inventory_store: inventory_store
     )
   end
 

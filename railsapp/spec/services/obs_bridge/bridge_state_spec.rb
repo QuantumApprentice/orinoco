@@ -13,6 +13,8 @@ RSpec.describe ObsBridge::BridgeState do
     end
   end
 
+  let(:inventory_store) { instance_double(ObsBridge::InventoryStore, clear_snapshot!: nil) }
+
   let(:clock_state) { Struct.new(:now).new(Time.utc(2026, 3, 23, 18, 0, 0)) }
   let(:clock) { -> { clock_state.now } }
 
@@ -22,7 +24,8 @@ RSpec.describe ObsBridge::BridgeState do
       bridge_id: "main",
       clock: clock,
       default_enabled: false,
-      status_writer: status_writer
+      status_writer: status_writer,
+      inventory_store: inventory_store
     )
   end
 
@@ -48,6 +51,7 @@ RSpec.describe ObsBridge::BridgeState do
         "updated_at" => "2026-03-23T18:00:00.000000Z"
       )
     )
+    expect(inventory_store).to have_received(:clear_snapshot!)
   end
 
   it "can be enabled and disabled" do
@@ -73,6 +77,7 @@ RSpec.describe ObsBridge::BridgeState do
     expect(latest_snapshot["connected"]).to eq("false")
     expect(latest_snapshot["runtime_state"]).to eq("down")
     expect(latest_snapshot["last_error"]).to eq("OBS went away")
+    expect(inventory_store).to have_received(:clear_snapshot!).at_least(:once)
   end
 
   it "records a capture window and reports activity while it is live" do
