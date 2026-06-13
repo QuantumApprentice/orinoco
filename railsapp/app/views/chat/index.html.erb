@@ -1,13 +1,13 @@
 <% content_for :title, "Twitch Chat" %>
 <% content_for :body_class, "overflow-hidden" %>
-<% content_for :main_class, "mx-auto w-full overflow-hidden px-5" %>
+<% content_for :main_class, "mx-auto w-full h-[calc(100dvh-4rem)] overflow-hidden px-5" %>
 
 <div
-  class="relative h-[calc(100dvh-4rem)] overflow-hidden"
+  class="relative h-full overflow-hidden"
   data-controller="chat-layout"
 >
   <header
-    class="absolute px-4 py-4 backdrop-blur"
+    class="absolute inset-x-0 top-0 z-20 px-4 py-4 bg-slate-950/70 backdrop-blur"
     data-chat-layout-target="header"
   >
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
